@@ -38,7 +38,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -74,16 +76,9 @@ public class ClientRepository {
     public Optional<ClientRepresentation> searchByName(String realmName, String name) {
         Objects.requireNonNull(name);
 
-        // this is expensive, but easy to implement.
-        // if this too expensive, please provide a PR which implement a pagination for findAll()
-        Optional<ClientRepresentation> foundClients = realmRepository.getResource(realmName)
-                .partialExport(false, true)
-                .getClients()
-                .stream()
-                .filter(client -> Objects.equals(name, client.getName()))
-                .findAny();
-
-        return foundClients.map(clientRepresentation -> getByClientId(realmName, clientRepresentation.getId()));
+        return Optional
+            .ofNullable(getClientToIdMapping(realmName).get(name))
+            .map(clientId -> getByClientId(realmName, clientId));
     }
 
     public ClientRepresentation getByClientId(String realmName, String clientId) {
@@ -118,6 +113,9 @@ public class ClientRepository {
     public void create(String realmName, ClientRepresentation client) {
         try (Response response = getResource(realmName).create(client)) {
             CreatedResponseUtil.getCreatedId(response);
+
+            // naive cache invalidation
+            clearClientToIdMapping();
         } catch (WebApplicationException error) {
             String errorMessage = ResponseUtil.getErrorMessage(error);
 
@@ -131,11 +129,17 @@ public class ClientRepository {
     public void update(String realmName, ClientRepresentation client) {
         ClientResource clientResource = getResourceById(realmName, client.getId());
         clientResource.update(client);
+
+        // naive cache invalidation
+        clearClientToIdMapping();
     }
 
     public void remove(String realmName, ClientRepresentation client) {
         ClientResource clientResource = getResourceById(realmName, client.getId());
         clientResource.remove();
+
+        // naive cache invalidation
+        clearClientToIdMapping();
     }
 
     private ClientsResource getResource(String realmName) {
@@ -336,5 +340,27 @@ public class ClientRepository {
         ClientResource clientResource = getResourceById(realmName, id);
 
         return clientResource.getPermissions().isEnabled();
+    }
+
+    // don't use this directly
+    private Map<String, String> _clientNameToId;
+    private Map<String, String> getClientToIdMapping(String realmName) {
+        if (_clientNameToId == null) {
+            buildClientToIdMapping(realmName);
+        }
+
+        return _clientNameToId;
+    }
+
+    private void buildClientToIdMapping(String realmName) {
+        _clientNameToId = new HashMap<>();
+        var realmExport = realmRepository.partialExport(realmName, false, true);
+        for (ClientRepresentation client : realmExport.getClients()) {
+            _clientNameToId.put(client.getName(), client.getId());
+        }
+    }
+
+    private void clearClientToIdMapping() {
+        _clientNameToId = null;
     }
 }
