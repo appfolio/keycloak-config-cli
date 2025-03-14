@@ -34,6 +34,8 @@ import org.keycloak.representations.idm.authorization.PolicyRepresentation;
 import org.keycloak.representations.idm.authorization.ResourceRepresentation;
 import org.keycloak.representations.idm.authorization.ResourceServerRepresentation;
 import org.keycloak.representations.idm.authorization.ScopeRepresentation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -52,6 +54,7 @@ import jakarta.ws.rs.core.Response;
 @Service
 @ConditionalOnProperty(prefix = "run", name = "operation", havingValue = "IMPORT", matchIfMissing = true)
 public class ClientRepository {
+    private static final Logger logger = LoggerFactory.getLogger(ClientRepository.class);
 
     private final RealmRepository realmRepository;
 
@@ -347,12 +350,15 @@ public class ClientRepository {
     private Map<String, String> getClientToIdMapping(String realmName) {
         if (_clientNameToId == null) {
             buildClientToIdMapping(realmName);
+        } else {
+            logger.debug("cache hit");
         }
 
         return _clientNameToId;
     }
 
     private void buildClientToIdMapping(String realmName) {
+        logger.debug("cache building");
         _clientNameToId = new HashMap<>();
         var realmExport = realmRepository.partialExport(realmName, false, true);
         for (ClientRepresentation client : realmExport.getClients()) {
@@ -361,6 +367,7 @@ public class ClientRepository {
     }
 
     private void clearClientToIdMapping() {
+        logger.debug("cache cleared");
         _clientNameToId = null;
     }
 }
