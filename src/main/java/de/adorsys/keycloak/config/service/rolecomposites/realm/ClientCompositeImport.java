@@ -25,6 +25,7 @@ import de.adorsys.keycloak.config.repository.RoleCompositeRepository;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -40,8 +41,8 @@ public class ClientCompositeImport {
     private final RoleCompositeRepository roleCompositeRepository;
 
     public ClientCompositeImport(
-            ClientRepository clientRepository,
-            RoleCompositeRepository roleCompositeRepository
+            @Qualifier("clientRepositoryCacheWrapper") ClientRepository clientRepository,
+            @Qualifier("roleCompositeRepositoryCacheWrapper") RoleCompositeRepository roleCompositeRepository
     ) {
         this.clientRepository = clientRepository;
         this.roleCompositeRepository = roleCompositeRepository;
