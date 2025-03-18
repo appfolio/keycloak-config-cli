@@ -21,6 +21,7 @@
 package de.adorsys.keycloak.config.repository;
 
 import de.adorsys.keycloak.config.exception.KeycloakRepositoryException;
+
 import org.keycloak.admin.client.resource.RoleResource;
 import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.representations.idm.ClientRepresentation;
@@ -36,11 +37,10 @@ import java.util.stream.Collectors;
 @Service
 @ConditionalOnProperty(prefix = "run", name = "operation", havingValue = "IMPORT", matchIfMissing = true)
 public class RoleCompositeRepository {
-
     private final RoleRepository roleRepository;
     private final ClientRepository clientRepository;
 
-    @Autowired
+    @Autowired(required = false)
     public RoleCompositeRepository(RoleRepository roleRepository, ClientRepository clientRepository) {
         this.roleRepository = roleRepository;
         this.clientRepository = clientRepository;
