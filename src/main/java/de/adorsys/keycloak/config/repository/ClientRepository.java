@@ -34,6 +34,8 @@ import org.keycloak.representations.idm.authorization.PolicyRepresentation;
 import org.keycloak.representations.idm.authorization.ResourceRepresentation;
 import org.keycloak.representations.idm.authorization.ResourceServerRepresentation;
 import org.keycloak.representations.idm.authorization.ScopeRepresentation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -47,13 +49,14 @@ import java.util.stream.Collectors;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
-@Service
+@Service("clientRepository")
 @ConditionalOnProperty(prefix = "run", name = "operation", havingValue = "IMPORT", matchIfMissing = true)
 public class ClientRepository {
+    private static final Logger logger = LoggerFactory.getLogger(ClientRepository.class);
 
     private final RealmRepository realmRepository;
 
-    @Autowired
+    @Autowired(required = false)
     public ClientRepository(RealmRepository realmRepository) {
         this.realmRepository = realmRepository;
     }
@@ -87,6 +90,7 @@ public class ClientRepository {
     }
 
     public ClientRepresentation getByClientId(String realmName, String clientId) {
+        logger.debug("retrieving client: " + clientId);
         Optional<ClientRepresentation> foundClients = searchByClientId(realmName, clientId);
 
         if (foundClients.isEmpty()) {
