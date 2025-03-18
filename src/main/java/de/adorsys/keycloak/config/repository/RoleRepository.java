@@ -26,6 +26,8 @@ import de.adorsys.keycloak.config.provider.KeycloakProvider;
 import de.adorsys.keycloak.config.resource.ManagementPermissions;
 import org.keycloak.admin.client.resource.*;
 import org.keycloak.representations.idm.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.lang.Nullable;
@@ -39,12 +41,14 @@ import jakarta.ws.rs.NotFoundException;
 @Service
 @ConditionalOnProperty(prefix = "run", name = "operation", havingValue = "IMPORT", matchIfMissing = true)
 public class RoleRepository {
+    private static final Logger logger = LoggerFactory.getLogger(RoleRepository.class);
+
     private final RealmRepository realmRepository;
     private final ClientRepository clientRepository;
     private final UserRepository userRepository;
     private final KeycloakProvider keycloakProvider;
 
-    @Autowired
+    @Autowired(required = false)
     public RoleRepository(
             RealmRepository realmRepository,
             ClientRepository clientRepository,
@@ -57,6 +61,7 @@ public class RoleRepository {
     }
 
     public Optional<RoleRepresentation> searchRealmRole(String realmName, String name) {
+        logger.debug("retrieving role: " + name);
         Optional<RoleRepresentation> maybeRole;
 
         RolesResource rolesResource = realmRepository.getResource(realmName).roles();
