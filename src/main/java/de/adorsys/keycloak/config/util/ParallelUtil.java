@@ -20,14 +20,14 @@
 
 package de.adorsys.keycloak.config.util;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.function.Consumer;
 
 // Override the default implementation of the forEach method in the ParallelUtil class
 // Found that the class loader in threads is different from the application class loader,
 // leading to [this issue](https://github.com/adorsys/keycloak-config-cli/issues/1107)
 public class ParallelUtil {
-    public static <T> void forEach(List<T> list, Consumer<T> consumer) {
+    public static <T> void forEach(Collection<T> list, Consumer<T> consumer) {
         ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
         list.parallelStream()
                 .forEach(x -> {

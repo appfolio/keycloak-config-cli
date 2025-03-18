@@ -40,6 +40,9 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+
+import de.adorsys.keycloak.config.util.ParallelUtil;
 
 @Component
 /*
@@ -82,13 +85,10 @@ public class KeycloakConfigRunner implements CommandLineRunner, ExitCodeGenerato
 
             Map<String, Map<String, List<RealmImport>>> realmImports = keycloakImport.getRealmImports();
 
-            for (Map<String, List<RealmImport>> realmImportLocations : realmImports.values()) {
-                for (Map.Entry<String, List<RealmImport>> realmImport : realmImportLocations.entrySet()) {
-                    logger.info("Importing file '{}'", realmImport.getKey());
-                    for (RealmImport realmImportParts : realmImport.getValue()) {
-                        realmImportService.doImport(realmImportParts);
-                    }
-                }
+            if (importConfigProperties.isParallel()) {
+                runLoopParallel(realmImports);
+            } else {
+                runLoop(realmImports);
             }
         } catch (NullPointerException e) {
             throw e;
@@ -113,5 +113,32 @@ public class KeycloakConfigRunner implements CommandLineRunner, ExitCodeGenerato
             String formattedTime = new SimpleDateFormat("mm:ss.SSS").format(new Date(totalTime));
             logger.info("keycloak-config-cli ran in {}.", formattedTime);
         }
+    }
+
+    private void runLoop(Map<String, Map<String, List<RealmImport>>> realmImports) {
+        for (Entry<String, Map<String, List<RealmImport>>> realmImportLocations : realmImports.entrySet()) {
+            for (Entry<String, List<RealmImport>> realmImport : realmImportLocations.getValue().entrySet()) {
+                logger.info("Importing file '{}'", realmImport.getKey());
+                for (RealmImport realmImportParts : realmImport.getValue()) {
+                    realmImportService.doImport(realmImportParts);
+                }
+            }
+        }
+    }
+
+    private void runLoopParallel(Map<String, Map<String, List<RealmImport>>> realmImports) {
+        ParallelUtil.forEach(
+            realmImports.entrySet(),
+            realmImportLocations -> ParallelUtil.forEach(
+                realmImportLocations.getValue().entrySet(), 
+                realmImport -> {
+                    logger.info("Importing file '{}'", realmImport.getKey());
+                    ParallelUtil.forEach(
+                        realmImport.getValue(),
+                        realmImportParts -> realmImportService.doImport(realmImportParts)
+                    );
+                }
+            )
+        );
     }
 }
