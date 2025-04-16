@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service("realmRoleClientCompositeImport")
 @ConditionalOnProperty(prefix = "run", name = "operation", havingValue = "IMPORT", matchIfMissing = true)
@@ -38,6 +39,7 @@ public class ClientCompositeImport {
 
     private final ClientRepository clientRepository;
     private final RoleCompositeRepository roleCompositeRepository;
+    private final Map<String, List<String>> realmClientIds = new HashMap<>();
 
     public ClientCompositeImport(
             ClientRepository clientRepository,
@@ -102,14 +104,9 @@ public class ClientCompositeImport {
     }
 
     private void removeRealmRoleClientComposites(String realmName, String realmRole, Map<String, List<String>> clientComposites) {
-        logger.debug("Fetching all clients");
-
-        Set<String> compositeClientsToRemove = clientRepository
-                .getAllIds(realmName)
+        Set<String> compositeClientsToRemove = getAllClientIds(realmName)
                 .filter(name -> !clientComposites.containsKey(name))
                 .collect(Collectors.toSet());
-
-        logger.debug("Done fetching all clients");
 
         Map<String, List<String>> clientCompositesToRemove = estimateRealmCompositeRolesToBeRemoved(
                 realmName,
@@ -151,5 +148,21 @@ public class ClientCompositeImport {
         }
 
         return clientRolesToRemove;
+    }
+
+    private Stream<String> getAllClientIds(String realmName) {
+        if (realmClientIds.containsKey(realmName)) {
+            return realmClientIds.get(realmName).stream();
+        }
+
+        logger.debug("Fetching all clients");
+        var clientIds = clientRepository
+                .getAllIds(realmName)
+                .collect(Collectors.toList());
+        logger.debug("Done fetching all clients");
+        
+        realmClientIds.put(realmName, clientIds);
+
+        return clientIds.stream();
     }
 }
