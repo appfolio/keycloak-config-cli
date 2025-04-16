@@ -136,23 +136,20 @@ public class ClientImportService {
                     .map(clientId -> clientRepository.getByClientId(realmImport.getRealm(), clientId));
         } else {
             logger.debug("Fetching all clients");
-            candidateClients = clientRepository.getAll(realmImport.getRealm())
-                    .stream();
-            logger.debug("Done fetching all clients");
+            candidateClients = clientRepository.getAll(realmImport.getRealm());
         }
 
-        List<ClientRepresentation> clientsToRemove = candidateClients
+        candidateClients
                 .filter(client -> !KeycloakUtil.isDefaultClient(client)
                         && !importedClients.contains(client.getClientId())
                         && !(Objects.equals(realmImport.getRealm(), "master")
                         && client.getClientId().endsWith("-realm"))
                 )
-                .toList();
-
-        for (ClientRepresentation clientToRemove : clientsToRemove) {
-            logger.debug("Remove client '{}' in realm '{}'", clientToRemove.getClientId(), realmImport.getRealm());
-            clientRepository.remove(realmImport.getRealm(), clientToRemove);
-        }
+                .forEach(clientToRemove -> {
+                    logger.debug("Remove client '{}' in realm '{}'", clientToRemove.getClientId(), realmImport.getRealm());
+                    clientRepository.remove(realmImport.getRealm(), clientToRemove);
+                });
+        logger.debug("Done deleting missing in import clients");
     }
 
     private void createOrUpdateClient(
