@@ -20,7 +20,6 @@
 
 package de.adorsys.keycloak.config.service.rolecomposites.client;
 
-import de.adorsys.keycloak.config.repository.ClientRepository;
 import de.adorsys.keycloak.config.repository.RoleCompositeRepository;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.slf4j.Logger;
@@ -31,23 +30,18 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service("clientRoleClientCompositeImport")
 @ConditionalOnProperty(prefix = "run", name = "operation", havingValue = "IMPORT", matchIfMissing = true)
 public class ClientCompositeImport {
     private static final Logger logger = LoggerFactory.getLogger(ClientCompositeImport.class);
 
-    private final ClientRepository clientRepository;
     private final RoleCompositeRepository roleCompositeRepository;
-    private final Map<String, List<String>> realmClientIds = new HashMap<>();
 
     @Autowired
     public ClientCompositeImport(
-            ClientRepository clientRepository,
             RoleCompositeRepository roleCompositeRepository
     ) {
-        this.clientRepository = clientRepository;
         this.roleCompositeRepository = roleCompositeRepository;
     }
 
@@ -121,15 +115,11 @@ public class ClientCompositeImport {
             String realmRole,
             Map<String, List<String>> clientComposites
     ) {
-        Set<String> compositeClientsToRemove = getAllClientIds(realmName)
-                .filter(name -> !clientComposites.containsKey(name))
-                .collect(Collectors.toSet());
-
         Map<String, List<String>> clientCompositeRolesToBeRemoved = estimateClientCompositeRolesToBeRemoved(
                 realmName,
                 roleClientId,
                 realmRole,
-                compositeClientsToRemove
+                clientComposites.keySet()
         );
 
         roleCompositeRepository.removeClientRoleClientComposites(realmName, roleClientId, realmRole, clientCompositeRolesToBeRemoved);
@@ -154,37 +144,22 @@ public class ClientCompositeImport {
             String realmName,
             String roleClientId,
             String roleName,
-            Set<String> compositeClientsToRemove
+            Collection<String> clientComposites
     ) {
-        Map<String, List<String>> existingClientCompositeNames = roleCompositeRepository.searchClientRoleClientComposites(
-                realmName,
-                roleClientId,
-                roleName
-        );
+        var clientRolesToRemove = roleCompositeRepository
+                .searchClientRoleClientComposites(
+                        realmName,
+                        roleClientId,
+                        roleName
+                );
 
-        Map<String, List<String>> clientRolesToRemove = new HashMap<>();
-        for (String clientId : compositeClientsToRemove) {
-            if (existingClientCompositeNames.containsKey(clientId)) {
-                clientRolesToRemove.put(clientId, existingClientCompositeNames.get(clientId));
-            }
-        }
+        clientComposites
+                .stream()
+                .filter(clientId -> clientRolesToRemove.containsKey(clientId))
+                .forEach(clientId -> {
+                    clientRolesToRemove.remove(clientId);
+                });
 
         return clientRolesToRemove;
-    }
-
-    private Stream<String> getAllClientIds(String realmName) {
-        if (realmClientIds.containsKey(realmName)) {
-            return realmClientIds.get(realmName).stream();
-        }
-
-        logger.debug("Fetching all clients");
-        var clientIds = clientRepository
-                .getAllIds(realmName)
-                .collect(Collectors.toList());
-        logger.debug("Done fetching all clients");
-        
-        realmClientIds.put(realmName, clientIds);
-
-        return clientIds.stream();
     }
 }
