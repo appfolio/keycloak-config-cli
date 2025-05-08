@@ -246,10 +246,16 @@ public class AuthenticationFlowsImportService {
             AuthenticationFlowRepresentation authenticationFlowToImport,
             AuthenticationFlowRepresentation existingAuthenticationFlow
     ) {
+        // Flows come in sorted by priority. Avoid comparing priority values so long
+        // as their order is the same.
         return !CloneUtil.deepEquals(
                 authenticationFlowToImport,
                 existingAuthenticationFlow,
-                "id"
+                "id", "authenticationExecutions"
+        ) || !CloneUtil.deepEquals(
+                authenticationFlowToImport.getAuthenticationExecutions(),
+                existingAuthenticationFlow.getAuthenticationExecutions(),
+                "priority"
         );
     }
 
