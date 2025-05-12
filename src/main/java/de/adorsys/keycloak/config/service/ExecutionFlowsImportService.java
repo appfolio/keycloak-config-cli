@@ -224,13 +224,11 @@ public class ExecutionFlowsImportService {
         AuthenticationExecutionInfoRepresentation storedExecutionFlow = storedExecutionFlows.get(0);
         storedExecutionFlow.setRequirement(executionToImport.getRequirement());
 
-        var importExecutionFlow = CloneUtil.patch(storedExecutionFlow, executionToImport);
-
         try {
             executionFlowRepository.updateExecutionFlow(
                     realmImport.getRealm(),
                     topLevelOrSubFlowToImport.getAlias(),
-                    importExecutionFlow
+                    storedExecutionFlow
             );
         } catch (WebApplicationException error) {
             String errorMessage = ResponseUtil.getErrorMessage(error);
