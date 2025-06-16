@@ -35,6 +35,8 @@ import org.keycloak.representations.idm.authorization.PolicyRepresentation;
 import org.keycloak.representations.idm.authorization.ResourceRepresentation;
 import org.keycloak.representations.idm.authorization.ResourceServerRepresentation;
 import org.keycloak.representations.idm.authorization.ScopeRepresentation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -50,6 +52,7 @@ import jakarta.ws.rs.core.Response;
 @Service
 @ConditionalOnProperty(prefix = "run", name = "operation", havingValue = "IMPORT", matchIfMissing = true)
 public class ClientRepository {
+    private static final Logger logger = LoggerFactory.getLogger(ClientRepository.class);
 
     private final RealmRepository realmRepository;
 
@@ -176,15 +179,24 @@ public class ClientRepository {
     }
 
     public final List<ScopeRepresentation> getAuthorizationScopes(String realmName, String clientId) {
-        // paginated version not available in the resource. There is pagination in the 
+        // paginated version not available in the resource. There is pagination in the
         // REST API at /clients/<id>/authz/resource-server/scope if we need it
         return getResourceById(realmName, clientId).authorization().scopes().scopes();
     }
 
     public final Stream<PolicyRepresentation> getAuthorizationPolicies(String realmName, String clientId) {
+        return getAuthorizationPolicies(realmName, clientId, Stream.of((String) null));
+    }
+
+    public final Stream<PolicyRepresentation> getAuthorizationPolicies(String realmName, String clientId, Stream<String> policyNames) {
         var policyResource = getResourceById(realmName, clientId).authorization().policies();
-        return PaginationUtil
-                .findAll((first, max) -> policyResource.policies(null, null, null, null, null, null, null, null, first, max));
+
+        return policyNames
+                .flatMap(name -> {
+                    logger.debug("Retrieving policies for name '{}'", name);
+                    return PaginationUtil
+                            .findAll((first, max) -> policyResource.policies(null, name, null, null, null, null, null, null, first, max));
+                });
     }
 
     public void updateAuthorizationSettings(String realmName, String id, ResourceServerRepresentation authorizationSettings) {
