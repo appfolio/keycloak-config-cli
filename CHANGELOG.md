@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Add support for `defaultValue` property in user profile attributes (Keycloak 26.4.0+) [#1330](https://github.com/adorsys/keycloak-config-cli/issues/1330)
 
 ### Fixed
+- Handle password policy violations gracefully during user import by removing password and retrying user creation/update
 - fix issue FGAP returns 501 Not implemented for keycloak-26.2.0+ [#1305](https://github.com/adorsys/keycloak-config-cli/issues/1305)
 - Prevent unnecessary authentication flow recreation when only realm-level properties change [#875](https://github.com/adorsys/keycloak-config-cli/issues/875)
 - Fix bug where `clientProfiles` and `clientPolicies` were erased when importing multiple realm configuration files
