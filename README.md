@@ -5,9 +5,6 @@
 [![codecov](https://codecov.io/gh/adorsys/keycloak-config-cli/branch/main/graph/badge.svg)](https://codecov.io/gh/adorsys/keycloak-config-cli)
 [![GitHub license](https://img.shields.io/github/license/adorsys/keycloak-config-cli)](https://github.com/adorsys/keycloak-config-cli/blob/main/LICENSE.txt)
 
-Run Keycloak configuration like code. Keep realm settings in Git and apply them repeatedly without drift or click‑ops.
-
-keycloak-config-cli provides declarative, idempotent configuration via the Admin API—version‑controlled and CI/CD‑ready—covering realms, clients, roles, flows, identity providers, and more.
 # Table of Contents
 
 - [Quick start](#quick-start)
