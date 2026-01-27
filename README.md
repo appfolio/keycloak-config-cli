@@ -62,6 +62,39 @@ java -jar ./target/keycloak-config-cli.jar \
   --import.files.locations=./contrib/example-config/moped.json
 ```
 
+
+## Help and community
+
+- Documentation: see `DOCUMENTATION.md` and `docs/FEATURES.md`
+- Report an issue: https://github.com/adorsys/keycloak-config-cli/issues
+- Security vulnerability? Please follow `SECURITY.md`
+- Code of Conduct: `CODE_OF_CONDUCT.md`
+- Questions and help: Join [#keycloak-config-cli](https://cloud-native.slack.com/archives/C09SPL5G3MY) on Slack for design discussions and questions. Create an account at https://slack.cncf.io/.
+
+## Quick start
+
+Using Docker:
+
+```bash
+docker run --rm \
+  -e KEYCLOAK_URL="http://localhost:8080" \
+  -e KEYCLOAK_USER=admin \
+  -e KEYCLOAK_PASSWORD=admin123 \
+  -e IMPORT_FILES_LOCATIONS='/config/*' \
+  -v "$PWD/contrib/example-config":/config \
+  adorsys/keycloak-config-cli:latest
+```
+
+Using the JAR (after building or downloading a release):
+
+```bash
+java -jar ./target/keycloak-config-cli.jar \
+  --keycloak.url=http://localhost:8080 \
+  --keycloak.user=admin \
+  --keycloak.password=admin123 \
+  --import.files.locations=./contrib/example-config/moped.json
+```
+
 # Config files
 
 The config files are based on the keycloak export files. You can use them to re-import your settings. But keep your files as small as possible. Remove all UUIDs and all stuff which is default set by keycloak.
