@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Enhance getting all Clients to remove Flow Override by using pagination by 100 to avoid timeout [#1384](https://github.com/adorsys/keycloak-config-cli/issues/1384)
 
 ### Fixed
+- Fix bug where `clientProfiles` and `clientPolicies` were erased when importing multiple realm configuration files
+- Fix Keycloak compatibility by stripping `clientProfiles` and `clientPolicies` from top-level realm updates
+- Improve idempotency for OTP policy, state, and checksum updates to avoid redundant realm updates
 - Fix issue where empty or null composite realm roles were not being cleared during import
 
 ## [6.4.1] - 2026-01-28
