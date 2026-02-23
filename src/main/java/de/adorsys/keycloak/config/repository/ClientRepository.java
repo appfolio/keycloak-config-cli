@@ -58,6 +58,7 @@ import jakarta.ws.rs.core.Response;
 public class ClientRepository {
     private static final Logger logger = LoggerFactory.getLogger(ClientRepository.class);
 
+    private static final Logger logger = LoggerFactory.getLogger(ClientRepository.class);
     private static final int HTTP_NOT_FOUND = 404;
     private static final int HTTP_NOT_IMPLEMENTED = 501;
 
