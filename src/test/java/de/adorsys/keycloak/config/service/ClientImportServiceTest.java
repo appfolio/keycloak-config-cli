@@ -159,7 +159,7 @@ class ClientImportServiceTest {
         existingKeep.setDefaultClientScopes(List.of());
         existingKeep.setOptionalClientScopes(List.of());
 
-        when(clientRepository.getAll("test-realm")).thenReturn(List.of(existingAdminPermissions, existingOther));
+        when(clientRepository.getAll("test-realm")).thenReturn(List.of(existingAdminPermissions, existingOther).stream());
         when(clientRepository.searchByClientId("test-realm", "keep")).thenReturn(Optional.of(existingKeep));
 
         RealmImport realmImport = new RealmImport();
