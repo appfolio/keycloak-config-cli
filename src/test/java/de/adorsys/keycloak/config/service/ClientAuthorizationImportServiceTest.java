@@ -337,6 +337,11 @@ class ClientAuthorizationImportServiceTest {
 
             realmImport.getClients().get(0).getAuthorizationSettings().setResources(List.of(updatedResource));
 
+            // Mock successful retrieval operations to reach the update phase
+            when(clientRepository.getAuthorizationScopes(anyString(), anyString())).thenReturn(new ArrayList<>());
+            when(clientRepository.getAuthorizationResources(anyString(), anyString())).thenReturn(List.of(existingResource).stream());
+            when(clientRepository.getAuthorizationPolicies(anyString(), anyString())).thenReturn(new ArrayList<PolicyRepresentation>().stream());
+
             // And: Repository throws NotFoundException on update
             NotFoundException exception = new NotFoundException(createMockResponse(404));
 
@@ -357,18 +362,20 @@ class ClientAuthorizationImportServiceTest {
             resource.setName("test-resource");
             authorizationSettings.setResources(List.of(resource));
 
-            // And: Repository throws 501 when refreshing authorization config
+            // And: Repository throws 501 when getting authorization scopes (early FGAP V2 detection)
             ServerErrorException exception = new ServerErrorException(createMockResponse(501));
 
             when(clientRepository.getAuthorizationConfigById(anyString(), anyString()))
-                    .thenReturn(authorizationSettings)  // First call succeeds
-                    .thenThrow(exception);              // Second call (refresh) throws 501
+                    .thenReturn(authorizationSettings);
+            doThrow(exception)
+                    .when(clientRepository).getAuthorizationScopes(anyString(), anyString());
 
             // When: Import is executed
             service.doImport(realmImport);
 
-            // Then: Exception is caught and logged, uses existing authorization settings
-            verify(clientRepository, times(2)).getAuthorizationConfigById(eq("test-realm"), eq("client-id"));
+            // Then: Authorization processing is skipped due to early FGAP V2 detection
+            verify(clientRepository, times(1)).getAuthorizationConfigById(eq("test-realm"), eq("client-id"));
+            verify(clientRepository, times(1)).getAuthorizationScopes(eq("test-realm"), eq("client-id"));
         }
 
         @Test
@@ -378,18 +385,17 @@ class ClientAuthorizationImportServiceTest {
             resource.setName("test-resource");
             authorizationSettings.setResources(List.of(resource));
 
-            // And: Repository throws 400 (Bad Request) when refreshing authorization config
+            // And: Repository throws 400 (Bad Request) when getting authorization config - handled gracefully
             BadRequestException exception = new BadRequestException(createMockResponse(400));
 
-            when(clientRepository.getAuthorizationConfigById(anyString(), anyString()))
-                    .thenReturn(authorizationSettings)
-                    .thenThrow(exception);
+            doThrow(exception)
+                    .when(clientRepository).getAuthorizationConfigById(anyString(), anyString());
 
             // When: Import is executed
             service.doImport(realmImport);
 
-            // Then: Exception is caught and logged, uses existing authorization settings
-            verify(clientRepository, times(2)).getAuthorizationConfigById(eq("test-realm"), eq("client-id"));
+            // Then: Exception is handled gracefully by getExistingAuthorization
+            verify(clientRepository, times(1)).getAuthorizationConfigById(eq("test-realm"), eq("client-id"));
         }
 
         @Test
@@ -554,6 +560,8 @@ class ClientAuthorizationImportServiceTest {
 
             realmImport.getClients().get(0).getAuthorizationSettings().setScopes(List.of(updatedScope));
 
+            // Mock successful retrieval operations to reach the update phase
+            when(clientRepository.getAuthorizationScopes(anyString(), anyString())).thenReturn(List.of(existingScope));
             // And: Repository throws NotFoundException on update
             NotFoundException exception = new NotFoundException(createMockResponse(404));
             doThrow(exception)

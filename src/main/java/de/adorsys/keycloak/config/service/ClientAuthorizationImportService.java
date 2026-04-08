@@ -229,18 +229,26 @@ public class ClientAuthorizationImportService {
         final List<PolicyRepresentation> sanitizedAuthorizationPolicies =
                 sanitizeAuthorizationPolicies(authorizationSettingsToImport, realmManagementPermissionsResolver);
 
-        var existingAuthorization = clientRepository.getAuthorizationConfigById(
-                realmName, client.getId()
-        );
+        var existingAuthorization = getExistingAuthorization(realmName, client);
 
         logger.debug("Handling authorization settings for client '{}'", client.getClientId());
         handleAuthorizationSettings(realmName, client, existingAuthorization, authorizationSettingsToImport);
 
         // Scopes must be created before resources so resources can bind to them
         logger.debug("Getting authorization scopes for client '{}'", client.getClientId());
-        var existingAuthzScopes = clientRepository.getAuthorizationScopes(
-                realmName, client.getId()
-        );
+        List<ScopeRepresentation> existingAuthzScopes;
+        try {
+            existingAuthzScopes = clientRepository.getAuthorizationScopes(
+                    realmName, client.getId()
+            );
+        } catch (NotFoundException | ServerErrorException e) {
+            if (isFgapV2Error(e.getResponse().getStatus())) {
+                logger.warn("Cannot retrieve authorization scopes for client '{}' - {}",
+                        getClientIdentifier(client), getFgapV2Message());
+                return; // Skip authorization processing for this client if fgap v2 is enabled
+            }
+            throw e;
+        }
 
         logger.debug("Creating/updating authorization scopes for client '{}'", client.getClientId());
         createOrUpdateAuthorizationScopes(
