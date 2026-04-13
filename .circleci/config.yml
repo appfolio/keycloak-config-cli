@@ -85,6 +85,7 @@ commands:
             export DOCKER_HOST_BLOCK=$(curl -fsSL http://npm-yarn-blocklist.security.appf.io | tr ' ' '\n' | sed 's/^/--add-host=/' | sed 's/$/:127.0.0.1/' | tr '\n' ' ' | sed 's/ $//')
             echo "Blocking hosts: $DOCKER_HOST_BLOCK"
             DOCKER_BUILDKIT=1 docker build -t "${FULL_IMAGE_TAG}" --progress=plain \
+              --platform linux/amd64,linux/arm64 \
               --secret id=npm_token,env=NPM_TOKEN \
               --secret id=github_npm_token,env=GITHUB_NPM_TOKEN \
               --build-arg="commit_sha=${CIRCLE_SHA1}" \
