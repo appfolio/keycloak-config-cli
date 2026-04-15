@@ -57,8 +57,6 @@ import jakarta.ws.rs.core.Response;
 @ConditionalOnProperty(prefix = "run", name = "operation", havingValue = "IMPORT", matchIfMissing = true)
 public class ClientRepository {
     private static final Logger logger = LoggerFactory.getLogger(ClientRepository.class);
-
-    private static final Logger logger = LoggerFactory.getLogger(ClientRepository.class);
     private static final int HTTP_NOT_FOUND = 404;
     private static final int HTTP_NOT_IMPLEMENTED = 501;
 
@@ -226,33 +224,6 @@ public class ClientRepository {
         var clientsResource = getResource(realmName);
         return PaginationUtil
                 .findAll((first, max) -> clientsResource.findAll(null, null, null, first, max));
-    }
-
-    public final Stream<ResourceRepresentation> getAuthorizationResources(String realmName, String clientId) {
-        var resourcesResource = getResourceById(realmName, clientId).authorization().resources();
-        return PaginationUtil
-                .findAll((first, max) -> resourcesResource.find(null, null, null, null, null, first, max));
-    }
-
-    public final List<ScopeRepresentation> getAuthorizationScopes(String realmName, String clientId) {
-        // paginated version not available in the resource. There is pagination in the
-        // REST API at /clients/<id>/authz/resource-server/scope if we need it
-        return getResourceById(realmName, clientId).authorization().scopes().scopes();
-    }
-
-    public final Stream<PolicyRepresentation> getAuthorizationPolicies(String realmName, String clientId) {
-        return getAuthorizationPolicies(realmName, clientId, Stream.of((String) null));
-    }
-
-    public final Stream<PolicyRepresentation> getAuthorizationPolicies(String realmName, String clientId, Stream<String> policyNames) {
-        var policyResource = getResourceById(realmName, clientId).authorization().policies();
-
-        return policyNames
-                .flatMap(name -> {
-                    logger.debug("Retrieving policies for name '{}'", name);
-                    return PaginationUtil
-                            .findAll((first, max) -> policyResource.policies(null, name, null, null, null, null, null, null, first, max));
-                });
     }
 
     public final Stream<ResourceRepresentation> getAuthorizationResources(String realmName, String clientId) {
