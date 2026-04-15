@@ -22,9 +22,9 @@ package de.adorsys.keycloak.config.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.keycloak.representations.idm.AuthenticationFlowRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
-import org.keycloak.representations.userprofile.config.UPConfig;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -37,12 +37,21 @@ import java.util.Map;
 public class RealmImport extends RealmRepresentation {
     private List<AuthenticationFlowImport> authenticationFlowImports;
 
-    private UPConfig userProfile;
+    private JsonNode userProfile;
 
     private Map<String, Map<String, String>> messageBundles;
 
+    private List<WorkflowRepresentation> workflows;
+
     private String checksum;
     private String source;
+    
+    // FGAP V2 field (Keycloak 26.2+) - Fine-Grained Admin Permissions
+    // This field is not in the base RealmRepresentation but is used in newer Keycloak versions
+    // When set to true, Keycloak automatically creates an "admin-permissions" client
+    private Boolean adminPermissionsEnabled;
+
+    private List<Map<String, Object>> organizationsRaw;
 
     @Override
     @SuppressWarnings("java:S1168")
@@ -60,7 +69,7 @@ public class RealmImport extends RealmRepresentation {
 
     @SuppressWarnings("unused")
     @JsonSetter("userProfile")
-    public void setUserProfile(UPConfig userProfile) {
+    public void setUserProfile(JsonNode userProfile) {
         this.userProfile = userProfile;
     }
 
@@ -74,7 +83,7 @@ public class RealmImport extends RealmRepresentation {
         this.messageBundles = messageBundles;
     }
 
-    public UPConfig getUserProfile() {
+    public JsonNode getUserProfile() {
         return userProfile;
     }
 
@@ -96,5 +105,34 @@ public class RealmImport extends RealmRepresentation {
     @JsonIgnore
     public void setSource(String source) {
         this.source = source;
+    }
+
+    public Boolean getAdminPermissionsEnabled() {
+        return adminPermissionsEnabled;
+    }
+
+    public void setAdminPermissionsEnabled(Boolean adminPermissionsEnabled) {
+        this.adminPermissionsEnabled = adminPermissionsEnabled;
+    }
+
+    @SuppressWarnings("unused")
+    @JsonSetter("organizations")
+    public void setOrganizationsRaw(List<Map<String, Object>> organizationsRaw) {
+        this.organizationsRaw = organizationsRaw;
+    }
+
+    @JsonIgnore
+    public List<Map<String, Object>> getOrganizationsRaw() {
+        return organizationsRaw;
+    }
+
+    public List<WorkflowRepresentation> getWorkflows() {
+        return workflows;
+    }
+
+    @SuppressWarnings("unused")
+    @JsonSetter("workflows")
+    public void setWorkflows(List<WorkflowRepresentation> workflows) {
+        this.workflows = workflows;
     }
 }

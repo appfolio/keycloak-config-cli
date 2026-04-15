@@ -33,7 +33,7 @@ import jakarta.validation.constraints.NotNull;
 
 @ConfigurationProperties(prefix = "keycloak", ignoreUnknownFields = false)
 @Validated
-@SuppressWarnings({"java:S107"})
+@SuppressWarnings({ "java:S107" })
 public class KeycloakConfigProperties {
 
     @NotBlank
@@ -66,8 +66,14 @@ public class KeycloakConfigProperties {
 
     private final Duration readTimeout;
 
+    @NotNull
+    private final boolean skipServerInfo;
+
     @Valid
     private final KeycloakAvailabilityCheck availabilityCheck;
+
+    @Valid
+    private final TlsConfig tls;
 
     public KeycloakConfigProperties(
             @DefaultValue("master") String loginRealm,
@@ -80,9 +86,11 @@ public class KeycloakConfigProperties {
             @DefaultValue("password") String grantType,
             @DefaultValue("true") boolean sslVerify,
             URL httpProxy,
+            @DefaultValue("false") boolean skipServerInfo,
             @DefaultValue KeycloakAvailabilityCheck availabilityCheck,
             @DefaultValue("10s") Duration connectTimeout,
-            @DefaultValue("10s") Duration readTimeout
+            @DefaultValue("10s") Duration readTimeout,
+            @DefaultValue TlsConfig tls
     ) {
         this.loginRealm = loginRealm;
         this.clientId = clientId;
@@ -94,9 +102,11 @@ public class KeycloakConfigProperties {
         this.grantType = grantType;
         this.sslVerify = sslVerify;
         this.httpProxy = httpProxy;
+        this.skipServerInfo = skipServerInfo;
         this.availabilityCheck = availabilityCheck;
         this.connectTimeout = connectTimeout;
         this.readTimeout = readTimeout;
+        this.tls = tls;
     }
 
     public String getLoginRealm() {
@@ -151,6 +161,62 @@ public class KeycloakConfigProperties {
         return readTimeout;
     }
 
+    public boolean isSkipServerInfo() {
+        return skipServerInfo;
+    }
+
+    public TlsConfig getTls() {
+        return tls;
+    }
+
+    public static class TlsConfig {
+        private final String keystorePath;
+        private final String keystorePassword;
+        private final String keystoreType;
+        private final String truststorePath;
+        private final String truststorePassword;
+        private final String truststoreType;
+
+        public TlsConfig(
+                String keystorePath,
+                String keystorePassword,
+                @DefaultValue("PKCS12") String keystoreType,
+                String truststorePath,
+                String truststorePassword,
+                @DefaultValue("PKCS12") String truststoreType) {
+            this.keystorePath = keystorePath;
+            this.keystorePassword = keystorePassword;
+            this.keystoreType = keystoreType;
+            this.truststorePath = truststorePath;
+            this.truststorePassword = truststorePassword;
+            this.truststoreType = truststoreType;
+        }
+
+        public String getKeystorePath() {
+            return keystorePath;
+        }
+
+        public String getKeystorePassword() {
+            return keystorePassword;
+        }
+
+        public String getKeystoreType() {
+            return keystoreType;
+        }
+
+        public String getTruststorePath() {
+            return truststorePath;
+        }
+
+        public String getTruststorePassword() {
+            return truststorePassword;
+        }
+
+        public String getTruststoreType() {
+            return truststoreType;
+        }
+    }
+
     public static class KeycloakAvailabilityCheck {
         @NotNull
         private final boolean enabled;
@@ -163,8 +229,8 @@ public class KeycloakConfigProperties {
 
         @SuppressWarnings("unused")
         public KeycloakAvailabilityCheck(@DefaultValue("false") boolean enabled,
-                                         @DefaultValue("120s") Duration timeout,
-                                         @DefaultValue("2s") Duration retryDelay) {
+                @DefaultValue("120s") Duration timeout,
+                @DefaultValue("2s") Duration retryDelay) {
             this.enabled = enabled;
             this.timeout = timeout;
             this.retryDelay = retryDelay;

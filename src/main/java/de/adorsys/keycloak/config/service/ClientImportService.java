@@ -23,6 +23,7 @@ package de.adorsys.keycloak.config.service;
 import de.adorsys.keycloak.config.exception.ImportProcessingException;
 import de.adorsys.keycloak.config.model.RealmImport;
 import de.adorsys.keycloak.config.properties.ImportConfigProperties;
+import de.adorsys.keycloak.config.provider.KeycloakProvider;
 import de.adorsys.keycloak.config.repository.AuthenticationFlowRepository;
 import de.adorsys.keycloak.config.repository.ClientRepository;
 import de.adorsys.keycloak.config.repository.ClientScopeRepository;
@@ -36,6 +37,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.keycloak.common.util.CollectionUtil;
 import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.ClientScopeRepresentation;
+import org.keycloak.representations.idm.ProtocolMapperRepresentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,18 +60,24 @@ import static java.lang.Boolean.TRUE;
 public class ClientImportService {
     private static final Logger logger = LoggerFactory.getLogger(ClientImportService.class);
 
+    private static final String ATTR_STANDARD_TOKEN_EXCHANGE_ENABLED = "standard.token.exchange.enabled";
+    private static final String ATTR_STANDARD_TOKEN_EXCHANGE_ENABLE_REFRESH_REQUESTED_TOKEN_TYPE =
+            "standard.token.exchange.enableRefreshRequestedTokenType";
+
     private static final String[] propertiesWithDependencies = new String[]{
             "authenticationFlowBindingOverrides",
             "authorizationSettings",
     };
 
     public static final String REALM_MANAGEMENT_CLIENT_ID = "realm-management";
+    public static final String ADMIN_PERMISSIONS_CLIENT_ID = "admin-permissions";
 
     private final ClientRepository clientRepository;
     private final ClientScopeRepository clientScopeRepository;
     private final AuthenticationFlowRepository authenticationFlowRepository;
     private final ImportConfigProperties importConfigProperties;
     private final StateService stateService;
+    private final KeycloakProvider keycloakProvider;
 
     @Autowired
     public ClientImportService(
@@ -77,12 +85,14 @@ public class ClientImportService {
             ClientScopeRepository clientScopeRepository,
             AuthenticationFlowRepository authenticationFlowRepository,
             ImportConfigProperties importConfigProperties,
-            StateService stateService) {
+            StateService stateService,
+            KeycloakProvider keycloakProvider) {
         this.clientRepository = clientRepository;
         this.clientScopeRepository = clientScopeRepository;
         this.authenticationFlowRepository = authenticationFlowRepository;
         this.importConfigProperties = importConfigProperties;
         this.stateService = stateService;
+        this.keycloakProvider = keycloakProvider;
     }
 
     public void doImport(RealmImport realmImport) {
@@ -143,7 +153,9 @@ public class ClientImportService {
                 .filter(client -> !KeycloakUtil.isDefaultClient(client)
                         && !importedClients.contains(client.getClientId())
                         && !(Objects.equals(realmImport.getRealm(), "master")
-                        && client.getClientId().endsWith("-realm"))
+                                && client.getClientId().endsWith("-realm"))
+                        && !(ADMIN_PERMISSIONS_CLIENT_ID.equals(client.getClientId())
+                                && keycloakProvider.isFgapV2Active())
                 )
                 .forEach(clientToRemove -> {
                     logger.debug("Remove client '{}' in realm '{}'", clientToRemove.getClientId(), realmImport.getRealm());
@@ -158,9 +170,22 @@ public class ClientImportService {
     ) {
         String realmName = realmImport.getRealm();
 
+        // Skip admin-permissions client only if FGAP V2 is active
+        boolean isAdminPermissionsClient = ADMIN_PERMISSIONS_CLIENT_ID.equals(client.getClientId())
+                || ADMIN_PERMISSIONS_CLIENT_ID.equals(client.getName());
+        if (isAdminPermissionsClient && keycloakProvider.isFgapV2Active()) {
+            logger.info("Skipping 'admin-permissions' client in realm '{}' - "
+                    + "FGAP V2 is active and this client is system-managed by Keycloak. "
+                    + "Remove it from your import configuration and use 'adminPermissionsEnabled: true' at realm level instead.",
+                    realmName);
+            return;
+        }
+
         // https://github.com/keycloak/keycloak/blob/74695c02423345dab892a0808bf9203c3f92af7c/server-spi-private/src/main/java/org/keycloak/models/utils/RepresentationToModel.java#L2878-L2881
         if (importConfigProperties.isValidate()
-                && client.getAuthorizationSettings() != null && !REALM_MANAGEMENT_CLIENT_ID.equals(client.getClientId())) {
+                && client.getAuthorizationSettings() != null
+                && !REALM_MANAGEMENT_CLIENT_ID.equals(client.getClientId())
+                && !ADMIN_PERMISSIONS_CLIENT_ID.equals(client.getClientId())) {
             if (TRUE.equals(client.isBearerOnly()) || TRUE.equals(client.isPublicClient())) {
                 throw new ImportProcessingException(
                         "Unsupported authorization settings for client '%s' in realm '%s': client must be confidential.",
@@ -188,6 +213,14 @@ public class ClientImportService {
         if (existingClient.isPresent()) {
             updateClientIfNeeded(realmName, client, existingClient.get());
         } else {
+            // Don't create system clients - they should already exist
+            if (REALM_MANAGEMENT_CLIENT_ID.equals(client.getClientId())
+                    || ADMIN_PERMISSIONS_CLIENT_ID.equals(client.getClientId()) || ADMIN_PERMISSIONS_CLIENT_ID.equals(client.getName())) {
+                throw new ImportProcessingException(
+                        "Cannot create system client '%s' in realm '%s': System clients should be auto-created by Keycloak",
+                        getClientIdentifier(client), realmName
+                );
+            }
             logger.debug("Create client '{}' in realm '{}'", getClientIdentifier(client), realmName);
             createClient(realmName, client);
         }
@@ -199,12 +232,17 @@ public class ClientImportService {
             ClientRepresentation existingClient
     ) {
         String[] propertiesToIgnore = ArrayUtils.addAll(propertiesWithDependencies, "id", "access");
+
+        prepareClientAttributesForImport(clientToUpdate, existingClient);
+        validateStandardTokenExchangeAttributes(realmName, clientToUpdate);
+
         ClientRepresentation mergedClient = CloneUtil.patch(existingClient, clientToUpdate, propertiesToIgnore);
         String clientIdentifier = getClientIdentifier(clientToUpdate);
 
         if (!isClientEqual(realmName, existingClient, mergedClient)) {
             logger.debug("Update client '{}' in realm '{}'", clientIdentifier, realmName);
             updateClient(realmName, mergedClient);
+            updateClientProtocolMappers(realmName, mergedClient, existingClient);
             updateClientDefaultOptionalClientScopes(realmName, mergedClient, existingClient);
         } else {
             logger.debug("No need to update client '{}' in realm '{}'", clientIdentifier, realmName);
@@ -215,7 +253,72 @@ public class ClientImportService {
         ClientRepresentation clientToImport = CloneUtil.deepClone(
                 client, ClientRepresentation.class, propertiesWithDependencies
         );
+
+        prepareClientAttributesForCreate(clientToImport);
+
+        validateStandardTokenExchangeAttributes(realmName, clientToImport);
+
         clientRepository.create(realmName, clientToImport);
+    }
+
+    private void prepareClientAttributesForCreate(ClientRepresentation clientToImport) {
+        Map<String, String> attributes = clientToImport.getAttributes();
+        if (attributes == null) {
+            return;
+        }
+
+        // Convenience: If refresh-token mode for standard token exchange is configured, enable standard token exchange.
+        String refreshRequestedTokenType = attributes.get(ATTR_STANDARD_TOKEN_EXCHANGE_ENABLE_REFRESH_REQUESTED_TOKEN_TYPE);
+        if (refreshRequestedTokenType != null && !refreshRequestedTokenType.isBlank()
+                && !attributes.containsKey(ATTR_STANDARD_TOKEN_EXCHANGE_ENABLED)) {
+            Map<String, String> patched = new HashMap<>(attributes);
+            patched.put(ATTR_STANDARD_TOKEN_EXCHANGE_ENABLED, "true");
+            clientToImport.setAttributes(patched);
+        }
+    }
+
+    private void validateStandardTokenExchangeAttributes(String realmName, ClientRepresentation client) {
+        Map<String, String> attributes = client.getAttributes();
+        if (attributes == null) {
+            return;
+        }
+
+        boolean standardTokenExchangeEnabled = Objects.equals("true", attributes.get(ATTR_STANDARD_TOKEN_EXCHANGE_ENABLED));
+        String enableRefreshRequestedTokenType = attributes.get(ATTR_STANDARD_TOKEN_EXCHANGE_ENABLE_REFRESH_REQUESTED_TOKEN_TYPE);
+        boolean hasRefreshRequestedTokenType = enableRefreshRequestedTokenType != null && !enableRefreshRequestedTokenType.isBlank();
+
+        if (!standardTokenExchangeEnabled && !hasRefreshRequestedTokenType) {
+            return;
+        }
+
+        boolean confidentialClient = !TRUE.equals(client.isPublicClient()) && !TRUE.equals(client.isBearerOnly());
+        if (!confidentialClient) {
+            throw new ImportProcessingException(
+                    "Unsupported standard token exchange settings for client '%s' in realm '%s': client must be confidential.",
+                    getClientIdentifier(client), realmName
+            );
+        }
+    }
+
+    private void prepareClientAttributesForImport(ClientRepresentation clientToUpdate, ClientRepresentation existingClient) {
+        if (clientToUpdate.getAttributes() == null) {
+            return;
+        }
+
+        Map<String, String> mergedAttributes = new HashMap<>();
+        if (existingClient.getAttributes() != null) {
+            mergedAttributes.putAll(existingClient.getAttributes());
+        }
+        mergedAttributes.putAll(clientToUpdate.getAttributes());
+
+        // Convenience: If refresh-token mode for standard token exchange is configured, enable standard token exchange.
+        String refreshRequestedTokenType = mergedAttributes.get(ATTR_STANDARD_TOKEN_EXCHANGE_ENABLE_REFRESH_REQUESTED_TOKEN_TYPE);
+        if (refreshRequestedTokenType != null && !refreshRequestedTokenType.isBlank()
+                && !mergedAttributes.containsKey(ATTR_STANDARD_TOKEN_EXCHANGE_ENABLED)) {
+            mergedAttributes.put(ATTR_STANDARD_TOKEN_EXCHANGE_ENABLED, "true");
+        }
+
+        clientToUpdate.setAttributes(mergedAttributes);
     }
 
     private boolean isClientEqual(
@@ -261,6 +364,19 @@ public class ClientImportService {
         try {
             clientRepository.update(realmName, patchedClient);
         } catch (WebApplicationException error) {
+            int status = -1;
+            try {
+                status = error.getResponse() != null ? error.getResponse().getStatus() : -1;
+            } catch (Exception e) {
+                logger.debug("Unable to get response status from WebApplicationException", e);
+            }
+
+            // FGAP V2: admin-permissions client may return 400 when server-managed. Swallow as defensive fallback.
+            if (status == 400 && ADMIN_PERMISSIONS_CLIENT_ID.equals(patchedClient.getClientId())) {
+                logger.debug("Skipping update for 'admin-permissions' client in realm '{}' - FGAP V2 manages this client internally", realmName);
+                return;
+            }
+
             String errorMessage = ResponseUtil.getErrorMessage(error);
             throw new ImportProcessingException(
                     String.format("Cannot update client '%s' in realm '%s': %s",
@@ -278,14 +394,7 @@ public class ClientImportService {
         String realmName = realmImport.getRealm();
 
         for (ClientRepresentation client : clients) {
-            ClientRepresentation existingClient;
-            if (client.getClientId() != null) {
-                existingClient = clientRepository.getByClientId(realmName, client.getClientId());
-            } else if (client.getName() != null) {
-                existingClient = clientRepository.getByName(realmName, client.getName());
-            } else {
-                throw new ImportProcessingException("clients require client id or name.");
-            }
+            ClientRepresentation existingClient = getExistingClient(realmName, client);
 
             updateAuthenticationFlowBindingOverrides(
                     realmName, existingClient, client.getAuthenticationFlowBindingOverrides()
@@ -334,6 +443,9 @@ public class ClientImportService {
             ClientRepresentation client,
             ClientRepresentation existingClient
     ) {
+        if (client.getDefaultClientScopes() == null && client.getOptionalClientScopes() == null) {
+            return;
+        }
         final List<String> defaultClientScopeNamesToAdd = ClientScopeUtil
                 .estimateClientScopesToAdd(client.getDefaultClientScopes(), existingClient.getDefaultClientScopes());
         final List<String> defaultClientScopeNamesToRemove = ClientScopeUtil
@@ -387,7 +499,42 @@ public class ClientImportService {
         }
     }
 
+    private void updateClientProtocolMappers(
+            String realmName,
+            ClientRepresentation client,
+            ClientRepresentation existingClient
+    ) {
+        List<ProtocolMapperRepresentation> protocolMappers = client.getProtocolMappers();
+        if (protocolMappers == null) {
+            return;
+        }
+
+        List<ProtocolMapperRepresentation> existingProtocolMappers = clientRepository
+                .getProtocolMappers(realmName, existingClient.getClientId());
+
+        List<ProtocolMapperRepresentation> protocolMappersToAdd = ProtocolMapperUtil
+                .estimateProtocolMappersToAdd(protocolMappers, existingProtocolMappers);
+        List<ProtocolMapperRepresentation> protocolMappersToRemove = ProtocolMapperUtil
+                .estimateProtocolMappersToRemove(protocolMappers, existingProtocolMappers);
+        List<ProtocolMapperRepresentation> protocolMappersToUpdate = ProtocolMapperUtil
+                .estimateProtocolMappersToUpdate(protocolMappers, existingProtocolMappers);
+
+        clientRepository.addProtocolMappers(realmName, client.getClientId(), protocolMappersToAdd);
+        clientRepository.removeProtocolMappers(realmName, client.getClientId(), protocolMappersToRemove);
+        clientRepository.updateProtocolMappers(realmName, client.getClientId(), protocolMappersToUpdate);
+    }
+
     private String getClientIdentifier(ClientRepresentation client) {
         return client.getName() != null && !KeycloakUtil.isDefaultClient(client) ? client.getName() : client.getClientId();
+    }
+
+    private ClientRepresentation getExistingClient(String realmName, ClientRepresentation client) {
+        if (client.getClientId() != null) {
+            return clientRepository.getByClientId(realmName, client.getClientId());
+        } else if (client.getName() != null) {
+            return clientRepository.getByName(realmName, client.getName());
+        } else {
+            throw new ImportProcessingException("clients require client id or name.");
+        }
     }
 }

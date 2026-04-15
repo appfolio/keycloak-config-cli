@@ -1,11 +1,13 @@
 .DS_Store
 .idea/
+.vscode/
 *.iml
 .docker/
 target/
 .project
 .classpath
 .settings/
+.vscode/
 pom.xml.versionsBackup
 pom.xml.releaseBackup
 pom.xml.tag

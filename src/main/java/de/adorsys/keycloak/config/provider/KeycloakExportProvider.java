@@ -37,6 +37,7 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Component;
 import org.springframework.util.PathMatcher;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
@@ -103,7 +104,7 @@ public class KeycloakExportProvider {
         return files;
     }
 
-    private Pair<String, List<RealmRepresentation>> readRealms(ImportResource resource) {
+    protected Pair<String, List<RealmRepresentation>> readRealms(ImportResource resource) {
         String location = resource.getFilename();
         String content = resource.getValue();
 
@@ -120,10 +121,13 @@ public class KeycloakExportProvider {
         return new ImmutablePair<>(location, realms);
     }
 
-    private List<RealmRepresentation> readContent(String content) {
+    protected List<RealmRepresentation> readContent(String content) {
         List<RealmRepresentation> realms = new ArrayList<>();
 
-        Yaml yaml = new Yaml();
+        LoaderOptions loaderOptions = new LoaderOptions();
+        loaderOptions.setCodePointLimit(normalizationConfigProperties.getFiles().getCodePointLimit());
+
+        Yaml yaml = new Yaml(loaderOptions);
         Iterable<Object> yamlDocuments = yaml.loadAll(content);
 
         for (Object yamlDocument : yamlDocuments) {
@@ -132,7 +136,7 @@ public class KeycloakExportProvider {
         return realms;
     }
 
-    private String prepareResourceLocation(String location) {
+    protected String prepareResourceLocation(String location) {
         String importLocation = location;
 
         importLocation = importLocation.replaceFirst("^zip:", "jar:");
@@ -144,7 +148,7 @@ public class KeycloakExportProvider {
         return importLocation;
     }
 
-    private boolean filterExcludedResources(Resource resource) {
+    protected boolean filterExcludedResources(Resource resource) {
         if (!resource.isFile()) {
             return true;
         }
@@ -182,7 +186,7 @@ public class KeycloakExportProvider {
                 });
     }
 
-    private ImportResource readResource(Resource resource) {
+    protected ImportResource readResource(Resource resource) {
         logger.debug("Loading file '{}'", resource.getFilename());
 
         try {
@@ -197,7 +201,7 @@ public class KeycloakExportProvider {
         }
     }
 
-    private Resource setupAuthentication(Resource resource) throws IOException {
+    protected Resource setupAuthentication(Resource resource) throws IOException {
         String userInfo;
 
         try {
@@ -224,7 +228,7 @@ public class KeycloakExportProvider {
         return new UrlResource(location);
     }
 
-    private boolean filterEmptyResources(ImportResource resource) {
+    protected boolean filterEmptyResources(ImportResource resource) {
         return !resource.getValue().isEmpty();
     }
 

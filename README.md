@@ -7,6 +7,8 @@
 
 # Table of Contents
 
+- [Quick start](#quick-start)
+- [Help and community](#help-and-community)
 - [Config Files](#config-files)
 - [Variable Substitution](#variable-substitution)
 - [Logging](#logging)
@@ -23,7 +25,42 @@
 
 # keycloak-config-cli
 
-keycloak-config-cli is a Keycloak utility to ensure the desired configuration state for a realm based on a JSON/YAML file. The format of the JSON/YAML file based on the export realm format. Store and handle the configuration files inside git just like normal code. A Keycloak restart isn't required to apply the configuration.
+keycloak-config-cli provides declarative, idempotent configuration for Keycloak via the Admin API—version-controlled and CI/CD-ready—covering realms, clients, roles, flows, identity providers, and more.
+
+It is a Keycloak utility to ensure the desired configuration state for a realm based on a JSON/YAML file. The format of the JSON/YAML file is based on the Keycloak realm export format. Store and manage configuration files in Git just like normal code. A Keycloak restart isn't required to apply the configuration.
+
+
+## Help and community
+
+- Documentation: see `DOCUMENTATION.md` and `docs/FEATURES.md`
+- Report an issue: https://github.com/adorsys/keycloak-config-cli/issues
+- Security vulnerability? Please follow `SECURITY.md`
+- Code of Conduct: `CODE_OF_CONDUCT.md`
+- Questions and help: Join [#keycloak-config-cli](https://cloud-native.slack.com/archives/C09SPL5G3MY) on Slack for design discussions and questions. Create an account at https://slack.cncf.io/.
+
+## Quick start
+
+Using Docker:
+
+```bash
+docker run --rm \
+  -e KEYCLOAK_URL="http://localhost:8080" \
+  -e KEYCLOAK_USER=admin \
+  -e KEYCLOAK_PASSWORD=admin123 \
+  -e IMPORT_FILES_LOCATIONS='/config/*' \
+  -v "$PWD/contrib/example-config":/config \
+  adorsys/keycloak-config-cli:latest
+```
+
+Using the JAR (after building or downloading a release):
+
+```bash
+java -jar ./target/keycloak-config-cli.jar \
+  --keycloak.url=http://localhost:8080 \
+  --keycloak.user=admin \
+  --keycloak.password=admin123 \
+  --import.files.locations=./contrib/example-config/moped.json
+```
 
 # Config files
 
@@ -51,7 +88,7 @@ Java:                  $(java:version)
 Localhost:             $(localhost:canonical-name)
 Properties File:       $(properties:src/test/resources/document.properties::mykey)
 Resource Bundle:       $(resourceBundle:org.example.testResourceBundleLookup:mykey)
-Script:                $(script:javascript:3 + 4)
+JavaScript Evaluation:   $${javascript: 3 + 4}
 System Property:       $(sys:user.dir)
 URL Decoder:           $(urlDecoder:Hello%20World%21)
 URL Encoder:           $(urlEncoder:Hello World!)
@@ -63,7 +100,27 @@ XML XPath:             $(xml:src/test/resources/document.xml:/root/path/to/node)
 
 to replace the values with java system properties or environment variables. Recursive variable replacement like `$(file:UTF-8:$(env:KEYCLOAK_PASSWORD_FILE))` is enabled by default if `import.var-substitution.enabled` is set to `true`.
 
+### JavaScript Evaluation
+
+keycloak-config-cli supports an explicit JavaScript evaluation phase. This is an opt-in feature and can be enabled by `import.var-substitution.script-evaluation-enabled=true`.
+
+Syntax: `$${javascript: ... }`
+
+Example:
+
+```json
+{
+  "realm": "$${javascript: 'realm-' + (env.APP_ENV || 'default').toLowerCase()}",
+  "enabled": "$${javascript: env.APP_ENV === 'INT'}",
+  "sessionTimeout": "$${javascript: 2 * 60 * 60}"
+}
+```
+
+The evaluation is sandboxed and only has access to an `env` object containing all environment variables and system properties. Only JSON-serializable outputs are allowed (string, number, boolean, null, array, object).
+
 The variable substitution is running before the json parser gets executed. This allows json structures or complex values.
+
+See [docs/javascript-substitution.md](./docs/javascript-substitution.md) for more information.
 
 See [Apache Common `StringSubstitutor` documentation](https://commons.apache.org/proper/commons-text/apidocs/org/apache/commons/text/StringSubstitutor.html) for more information and advanced usage.
 
@@ -228,8 +285,15 @@ Checkout helm docs about [chart dependencies](https://helm.sh/docs/topics/charts
 | --keycloak.http-proxy                 | `KEYCLOAK_HTTPPROXY`                 | Connect to Keycloak via HTTP Proxy. Format: `scheme://hostname:port`              | -           |                                                                                                  |
 | --keycloak.connect-timeout            | `KEYCLOAK_CONNECTTIMEOUT`            | Connection timeout                                                                | `10s`       |                                                                                                  |
 | --keycloak.read-timeout               | `KEYCLOAK_READTIMEOUT`               | Read timeout                                                                      | `10s`       | configured as [Java Duration](https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html) |
+| --keycloak.tls.keystore-path          | `KEYCLOAK_TLS_KEYSTOREPATH`          | Path to keystore containing client certificate and private key for mTLS           | -           |                                                                                                  |
+| --keycloak.tls.keystore-password      | `KEYCLOAK_TLS_KEYSTOREPASSWORD`      | Password for the keystore                                                         | -           |                                                                                                  |
+| --keycloak.tls.keystore-type          | `KEYCLOAK_TLS_KEYSTORETYPE`          | Keystore type                                                                     | `PKCS12`    |                                                                                                  |
+| --keycloak.tls.truststore-path        | `KEYCLOAK_TLS_TRUSTSTOREPATH`        | Path to truststore containing trusted CA certificates                             | -           |                                                                                                  |
+| --keycloak.tls.truststore-password    | `KEYCLOAK_TLS_TRUSTSTOREPASSWORD`    | Password for the truststore                                                       | -           |                                                                                                  |
+| --keycloak.tls.truststore-type        | `KEYCLOAK_TLS_TRUSTSTORETYPE`        | Truststore type                                                                   | `PKCS12`    |                                                                                                  |
 | --keycloak.availability-check.enabled | `KEYCLOAK_AVAILABILITYCHECK_ENABLED` | Wait until Keycloak is available                                                  | `false`     | configured as [Java Duration](https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html) |
 | --keycloak.availability-check.timeout | `KEYCLOAK_AVAILABILITYCHECK_TIMEOUT` | Wait timeout for keycloak availability check                                      | `120s`      |                                                                                                  |
+| --keycloak.skip-server-info          | `KEYCLOAK_SKIPSERVERINFO`            | Skip fetching Keycloak server info. Required for non-master realm authentication. | `false`     | [SKIP_SERVER_INFO.md](docs/SKIP_SERVER_INFO.md)                                                  |
 
 ### Import options
 
@@ -246,7 +310,7 @@ Checkout helm docs about [chart dependencies](https://helm.sh/docs/topics/charts
 | --import.remote-state.encryption-key                  | `IMPORT_REMOTESTATE_ENCRYPTIONKEY`                 | Enables remote state in encrypted format. If unset, state will be stored in plain                                                                                                                                                                                                                                                                                                                                                  | -          |                               |
 | --import.var-substitution.enabled                     | `IMPORT_VARSUBSTITUTION_ENABLED`                   | Enable variable substitution config files                                                                                                                                                                                                                                                                                                                                                                                          | `false`    |                               |
 | --import.var-substitution.nested                      | `IMPORT_VARSUBSTITUTION_NESTED`                    | Expand variables in variables.                                                                                                                                                                                                                                                                                                                                                                                                     | `true`     |                               |
-| --import.var-substitution.undefined-is-error          | `IMPORT_VARSUBSTITUTION_UNDEFINEDISTERROR`         | Raise exceptions, if variables are not defined.                                                                                                                                                                                                                                                                                                                                                                                    | `true`     |                               |
+| --import.var-substitution.undefined-is-error          | `IMPORT_VARSUBSTITUTION_UNDEFINEDISERROR`         | Raise exceptions, if variables are not defined.                                                                                                                                                                                                                                                                                                                                                                                    | `true`     |                               |
 | --import.var-substitution.prefix                      | `IMPORT_VARSUBSTITUTION_PREFIX`                    | Configure the variable prefix, if `import.var-substitution.enabled` is `true`.                                                                                                                                                                                                                                                                                                                                                     | `$(`       |                               |
 | --import.var-substitution.suffix                      | `IMPORT_VARSUBSTITUTION_SUFFIX`                    | Configure the variable suffix, if `import.var-substitution.enabled` is `true`.                                                                                                                                                                                                                                                                                                                                                     | `)`        |                               |
 | --import.behaviors.sync-user-federation               | `IMPORT_BEHAVIORS_SYNC_USER_FEDERATION`            | Enable the synchronization of user federation.                                                                                                                                                                                                                                                                                                                                                                                     | `false`    |                               |
@@ -254,6 +318,8 @@ Checkout helm docs about [chart dependencies](https://helm.sh/docs/topics/charts
 | --import.behaviors.skip-attributes-for-federated-user | `IMPORT_BEHAVIORS_SKIP_ATTRIBUTESFORFEDERATEDUSER` | Set attributes to null for federated users to avoid read only conflicts                                                                                                                                                                                                                                                                                                                                                            | `false`    |                               |
 | --import.behaviors.checksum-with-cache-key            | `IMPORT_BEHAVIORS_CHECKSUM_WITH_CACHE_KEY`         | Use cache key to store the checksum, if set to `false` a checksum for each import file is stored                                                                                                                                                                                                                                                                                                                                   | `true`     |                               |
 | --import.behaviors.checksum-changed                   | `IMPORT_BEHAVIORS_CHECKSUM_CHANGED`                | Defines the behavior if the checksum of an imported file has changed. Set to `fail` when import should be aborted, `continue` reimport and update the checksum.                                                                                                                                                                                                                                                                    | `continue` |                               |
+| --import.users.merge-roles                            | `IMPORT_USERS_MERGEROLES`                          | Only add missing user realm roles; do not remove existing realm roles not present in the import config.                                                                                                                                                                                                                                                                                                                            | `false`    |                               |
+| --import.users.merge-groups                           | `IMPORT_USERS_MERGEGROUPS`                         | Only add missing user groups; do not remove existing groups not present in the import config.                                                                                                                                                                                                                                                                                                                                      | `false`    |                               |
 
 ## Spring boot options
 
