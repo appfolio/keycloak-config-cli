@@ -846,6 +846,51 @@
                                     <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportManagedNoDeleteIT.java</destinationFile>
                                 </configuration>
                             </execution>
+
+                            <execution>
+                                <id>replace-organizationimportservice-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/service/OrganizationImportService.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/service/OrganizationImportService.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-organizationrepository-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/repository/OrganizationRepository.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/repository/OrganizationRepository.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-importorganizationsit-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportOrganizationsIT.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportOrganizationsIT.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-organizationimportservicetest-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/OrganizationImportServiceTest.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/OrganizationImportServiceTest.java</destinationFile>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                     <plugin>
@@ -985,6 +1030,50 @@ import org.keycloak.representations.userprofile.config.UPConfig;</token>
                                     <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportManagedNoDeleteIT.java</destinationFile>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>replace-organizationimportservice-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/service/OrganizationImportService.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/service/OrganizationImportService.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-organizationrepository-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/repository/OrganizationRepository.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/repository/OrganizationRepository.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-importorganizationsit-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportOrganizationsIT.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportOrganizationsIT.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-organizationimportservicetest-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/OrganizationImportServiceTest.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/OrganizationImportServiceTest.java</destinationFile>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                     <plugin>
@@ -1095,7 +1184,75 @@ import org.keycloak.representations.userprofile.config.UPConfig;</token>
                                     <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportManagedNoDeleteIT.java</destinationFile>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>replace-organizationimportservice-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/service/OrganizationImportService.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/service/OrganizationImportService.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-organizationrepository-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/repository/OrganizationRepository.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/repository/OrganizationRepository.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-importorganizationsit-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportOrganizationsIT.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportOrganizationsIT.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-organizationimportservicetest-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/OrganizationImportServiceTest.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/OrganizationImportServiceTest.java</destinationFile>
+                                </configuration>
+                            </execution>
                         </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>pre-keycloak26-6</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/OrganizationRepository.java</exclude>
+                                <exclude>**/OrganizationImportService.java</exclude>
+                            </excludes>
+                            <testExcludes>
+                                <exclude>**/ImportRealmWithPasskeyPropertiesIT.java</exclude>
+                                <exclude>**/ImportOrganizationsIT.java</exclude>
+                            </testExcludes>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>
@@ -1105,11 +1262,30 @@ import org.keycloak.representations.userprofile.config.UPConfig;</token>
             <build>
                 <plugins>
                     <plugin>
+                        <groupId>com.coderplus.maven.plugins</groupId>
+                        <artifactId>copy-rename-maven-plugin</artifactId>
+                        <version>1.0.1</version>
+                        <executions>
+                            <execution>
+                                <id>replace-organizationrepository-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/repository/OrganizationRepository.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/repository/OrganizationRepository.java</destinationFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-compiler-plugin</artifactId>
                         <configuration>
                             <testExcludes>
                                 <exclude>**/ImportRealmWithPasskeyPropertiesIT.java</exclude>
+                                <exclude>**/ImportOrganizationsIT.java</exclude>
                             </testExcludes>
                         </configuration>
                     </plugin>
@@ -1125,8 +1301,8 @@ import org.keycloak.representations.userprofile.config.UPConfig;</token>
                         <artifactId>maven-compiler-plugin</artifactId>
                         <configuration>
                             <excludes>
-                                <exclude>**/OrganizationImportService.java</exclude>
                                 <exclude>**/OrganizationRepository.java</exclude>
+                                <exclude>**/OrganizationImportService.java</exclude>
                             </excludes>
                             <testExcludes>
                                 <exclude>**/OrganizationImportServiceTest.java</exclude>
@@ -1173,6 +1349,51 @@ import org.keycloak.representations.userprofile.config.UPConfig;</token>
                                 <configuration>
                                     <sourceFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportManagedNoDeleteIT.java.legacy</sourceFile>
                                     <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportManagedNoDeleteIT.java</destinationFile>
+                                </configuration>
+                            </execution>
+
+                            <execution>
+                                <id>replace-organizationimportservice-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/service/OrganizationImportService.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/service/OrganizationImportService.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-organizationrepository-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/repository/OrganizationRepository.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/main/java/de/adorsys/keycloak/config/repository/OrganizationRepository.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-importorganizationsit-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportOrganizationsIT.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/ImportOrganizationsIT.java</destinationFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>replace-organizationimportservicetest-with-legacy</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/OrganizationImportServiceTest.java.legacy</sourceFile>
+                                    <destinationFile>${project.basedir}/src/test/java/de/adorsys/keycloak/config/service/OrganizationImportServiceTest.java</destinationFile>
                                 </configuration>
                             </execution>
                         </executions>

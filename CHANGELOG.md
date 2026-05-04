@@ -7,6 +7,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [Unreleased]
 
 ### Added
+- Enhance getting all Clients to remove Flow Override by using pagination by 100 to avoid timeout [#1384](https://github.com/adorsys/keycloak-config-cli/issues/1384)
+
+### Added
+- JavaScript variable substitution support in configuration files [#934](https://github.com/adorsys/keycloak-config-cli/issues/934)
+
+### Added
+- Enhance getting all Clients to remove Flow Override by using pagination by 100 to avoid timeout [#1384](https://github.com/adorsys/keycloak-config-cli/issues/1384)
+
+### Fixed
+- Fix bug where `clientProfiles` and `clientPolicies` were erased when importing multiple realm configuration files
+- Fix Keycloak compatibility by stripping `clientProfiles` and `clientPolicies` from top-level realm updates
+- Improve idempotency for OTP policy, state, and checksum updates to avoid redundant realm updates
+- Fix issue where empty or null composite realm roles were not being cleared during import
+- Fix Keycloak client library compatibility by setting `FAIL_ON_UNKNOWN_PROPERTIES=false` in JacksonProvider for backward compatibility with different Keycloak server versions
+- Fix exception in 'isDefaultRole' when description is null
+- Fix issue where import stop on removal of authenticator config already missing [#1382](https://github.com/adorsys/keycloak-config-cli/issues/1382)
+
+## [6.4.1] - 2026-01-28
+
+### Added
 - Add support for x509 client certificate authentication (mTLS) via `keycloak.tls.*` properties [#959](https://github.com/adorsys/keycloak-config-cli/issues/959)
 
 ### Fixed
@@ -15,7 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Keycloak workflow API documentation differs from actual implementation [#1476](https://github.com/adorsys/keycloak-config-cli/pull/1476)
 - Support for Keycloak 26.5.5 to fix [#1303](https://github.com/adorsys/keycloak-config-cli/issues/1303)
-
+- Fix creation of custom first broker login flow and binding it to realm [#1481](https://github.com/adorsys/keycloak-config-cli/issues/1481)
 
 ### Security
 - Update assertj-core from 3.26.3 to 3.27.7 (CVE-2026-24400, XXE vulnerability)
@@ -59,6 +79,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Fix issue where import stop on removal of authenticator config already missing [#1382](https://github.com/adorsys/keycloak-config-cli/issues/1382)
 - Fix authorization import order: create scopes before resources to ensure proper binding and prevent HTTP 403 errors [#1008](https://github.com/adorsys/keycloak-config-cli/issues/1008)
 
+
+### Added
+- Explicitly set the class loader in parallel forEach consumers
+
+### Fixed
+- Fix `ClassNotFoundException: org.jboss.resteasy.client.jaxrs.internal.proxy.ProxyBuilderImpl` exception when using parallel imports [#1107](https://github.com/adorsys/keycloak-config-cli/issues/1107)
 
 ## [6.4.1] - 2026-01-28
 
