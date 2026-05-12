@@ -127,7 +127,7 @@ public class ClientNormalizationService {
         normalizedClient.setClientId(clientId);
 
         // Older versions of keycloak include SAML attributes even in OIDC clients. Ignore these.
-        if (normalizedClient.getProtocol().equals("openid-connect") && normalizedClient.getAttributes() != null) {
+        if ("openid-connect".equals(normalizedClient.getProtocol()) && normalizedClient.getAttributes() != null) {
             normalizedClient.getAttributes().keySet().removeIf(SAML_ATTRIBUTES::contains);
         }
 
