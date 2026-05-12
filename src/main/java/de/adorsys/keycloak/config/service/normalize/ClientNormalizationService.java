@@ -135,9 +135,12 @@ public class ClientNormalizationService {
             var overrides = new HashMap<String, String>();
             var flows = exportedRealm.getAuthenticationFlows().stream()
                     .collect(Collectors.toMap(AuthenticationFlowRepresentation::getId, AuthenticationFlowRepresentation::getAlias));
-            for (var entry : normalizedClient.getAuthenticationFlowBindingOverrides().entrySet()) {
+            for (var entry : getNonNull(normalizedClient.getAuthenticationFlowBindingOverrides()).entrySet()) {
                 var id = entry.getValue();
-                overrides.put(entry.getKey(), flows.get(id));
+                var alias = flows.get(id);
+                if (alias != null) {
+                    overrides.put(entry.getKey(), alias);
+                }
             }
             normalizedClient.setAuthenticationFlowBindingOverrides(overrides);
         }
