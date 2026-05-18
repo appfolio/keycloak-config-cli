@@ -121,7 +121,7 @@ jobs:
 
       - name: Compute SemVer parts of Keycloak version
         id: keycloak_semver
-        uses: madhead/semver-utils@v4
+        uses: madhead/semver-utils@v5
         with:
           version: ${{ matrix.env.KEYCLOAK_VERSION }}
 
