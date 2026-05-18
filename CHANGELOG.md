@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 - Add support for x509 client certificate authentication (mTLS) via `keycloak.tls.*` properties [#959](https://github.com/adorsys/keycloak-config-cli/issues/959)
+- Add missing Keycloak baseline configurations for versions 21.1.2, 22.0.5, 26.1.0, 26.4.0, 26.5.5, and 26.5.7 [#1568](https://github.com/adorsys/keycloak-config-cli/issues/1568)
 
 ### Fixed
 - Fix `NullPointerException` during normalization when optional fields like `keycloakVersion` or client `protocol` are missing from the exported JSON [#1536](https://github.com/adorsys/keycloak-config-cli/issues/1536)
