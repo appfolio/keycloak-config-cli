@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Add missing Keycloak baseline configurations for versions 21.1.2, 22.0.5, 26.1.0, 26.4.0, 26.5.5, and 26.5.7 [#1568](https://github.com/adorsys/keycloak-config-cli/issues/1568)
 
 ### Fixed
+- Fix LDAP default mappers deletion on initial creation (when LDAP UserStorageProvider is created with an empty subComponents block, Keycloak's automatically generated default mappers are now correctly deleted) [#1514](https://github.com/adorsys/keycloak-config-cli/issues/1514)
 - Fix `NullPointerException` during normalization when optional fields like `keycloakVersion` or client `protocol` are missing from the exported JSON [#1536](https://github.com/adorsys/keycloak-config-cli/issues/1536)
 - Fix Helm chart not being published to GitHub Pages on releases by publishing from tag pushes instead of main branch [#1356](https://github.com/adorsys/keycloak-config-cli/issues/1356)
 - Fix duplication of Identity Provider authorization resources (both `<uuid>` and `idp.resource.<uuid>`) when importing realm-management FGAP permissions [#1402](https://github.com/adorsys/keycloak-config-cli/issues/1402)
