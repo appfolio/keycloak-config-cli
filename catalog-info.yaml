@@ -1,0 +1,9 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: keycloak-config-cli
+  description: "Fork of adorsys/keycloak-config-cli for importing YAML/JSON configuration files into Keycloak"
+spec:
+  type: tool
+  lifecycle: stable
+  owner: CODEOWNERS
