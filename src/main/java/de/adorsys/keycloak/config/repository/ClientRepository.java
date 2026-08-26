@@ -43,7 +43,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -437,20 +436,5 @@ public class ClientRepository {
                             clientResource.toRepresentation().getClientId(), realmName), e);
         }
         throw e;
-    }
-
-    private List<ClientRepresentation> findAll(String realmName, int pageSize) {
-        List<ClientRepresentation> allClient = new ArrayList<>(pageSize);
-
-        int loop = 0;
-        var onePage = getResource(realmName).findAll(null, null, null, 0, pageSize);
-        while (onePage.size() == pageSize) {
-            loop++;
-            allClient.addAll(onePage);
-            onePage = getResource(realmName).findAll(null, null, null, pageSize * loop, pageSize);
-        }
-        allClient.addAll(onePage);
-
-        return allClient;
     }
 }

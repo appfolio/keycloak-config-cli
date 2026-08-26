@@ -97,7 +97,7 @@ public class ExecutionFlowsImportService {
         for (AuthenticationExecutionInfoRepresentation existingExecution : existingExecutions) {
             try {
                 resource.removeExecution(existingExecution.getId());
-            } catch (NotFoundException e) {
+            } catch (NotFoundException ignored) {
                 // removeExecution can be recursive, so it may have already removed
                 // items in the list
             }
