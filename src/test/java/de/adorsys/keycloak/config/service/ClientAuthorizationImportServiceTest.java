@@ -727,8 +727,8 @@ class ClientAuthorizationImportServiceTest {
 
             // Then: V2 format (ID only) is used
             String resourcesConfig = verifyPolicyCreationAndGetResources();
-            assertEquals("[\"client.resource.abc-123-def\"]", resourcesConfig,
-                "V2 should use full resource string format");
+            assertEquals("[\"abc-123-def\"]", resourcesConfig,
+                "V2 should use ID only format");
         }
 
         @Test
@@ -772,8 +772,8 @@ class ClientAuthorizationImportServiceTest {
             String resourcesConfig = verifyPolicyCreationAndGetResources();
             assertTrue(resourcesConfig.contains("abc-123-def"), "First client ID should be present");
             assertTrue(resourcesConfig.contains("xyz-789-ghi"), "Second client ID should be present");
-            assertTrue(resourcesConfig.contains("client.resource"),
-                "V2 format should contain 'client.resource' prefix");
+            assertFalse(resourcesConfig.contains("client.resource"),
+                "V2 format should not contain 'client.resource' prefix");
         }
 
         @Test
@@ -791,8 +791,8 @@ class ClientAuthorizationImportServiceTest {
 
             // Then: Bare placeholder is transformed to ID only (using defaultResourceType to infer type)
             String resourcesConfig = verifyPolicyCreationAndGetResources();
-            assertEquals("[\"client.resource.abc-123-def\"]", resourcesConfig,
-                "Bare placeholder should be transformed to full resource name using defaultResourceType");
+            assertEquals("[\"abc-123-def\"]", resourcesConfig,
+                "Bare placeholder should be transformed to ID using defaultResourceType");
         }
 
         @Test

@@ -23,11 +23,13 @@ package de.adorsys.keycloak.config.service;
 import de.adorsys.keycloak.config.exception.ImportProcessingException;
 import de.adorsys.keycloak.config.exception.InvalidImportException;
 import de.adorsys.keycloak.config.model.RealmImport;
+import de.adorsys.keycloak.config.provider.KeycloakProvider;
 import de.adorsys.keycloak.config.repository.AuthenticationFlowRepository;
 import de.adorsys.keycloak.config.repository.AuthenticatorConfigRepository;
 import de.adorsys.keycloak.config.repository.ExecutionFlowRepository;
 import de.adorsys.keycloak.config.util.AuthenticationFlowUtil;
 import de.adorsys.keycloak.config.util.ResponseUtil;
+import de.adorsys.keycloak.config.util.VersionUtil;
 import org.keycloak.representations.idm.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,19 +53,24 @@ import jakarta.ws.rs.WebApplicationException;
 public class ExecutionFlowsImportService {
     private static final Logger logger = LoggerFactory.getLogger(ExecutionFlowsImportService.class);
 
+    private static final String SUB_FLOW_EXECUTION_PRIORITY_MIN_VERSION = "25";
+
     private final ExecutionFlowRepository executionFlowRepository;
     private final AuthenticatorConfigRepository authenticatorConfigRepository;
     private final AuthenticationFlowRepository authenticationFlowRepository;
+    private final KeycloakProvider keycloakProvider;
 
     @Autowired
     public ExecutionFlowsImportService(
             ExecutionFlowRepository executionFlowRepository,
             AuthenticatorConfigRepository authenticatorConfigRepository,
-            AuthenticationFlowRepository authenticationFlowRepository
+            AuthenticationFlowRepository authenticationFlowRepository,
+            KeycloakProvider keycloakProvider
     ) {
         this.executionFlowRepository = executionFlowRepository;
         this.authenticatorConfigRepository = authenticatorConfigRepository;
         this.authenticationFlowRepository = authenticationFlowRepository;
+        this.keycloakProvider = keycloakProvider;
     }
 
     public void createExecutionsAndExecutionFlows(
@@ -90,7 +97,7 @@ public class ExecutionFlowsImportService {
         for (AuthenticationExecutionInfoRepresentation existingExecution : existingExecutions) {
             try {
                 resource.removeExecution(existingExecution.getId());
-            } catch (NotFoundException e) {
+            } catch (NotFoundException ignored) {
                 // removeExecution can be recursive, so it may have already removed
                 // items in the list
             }
@@ -290,8 +297,17 @@ public class ExecutionFlowsImportService {
         logger.debug("Create execution '{}' for non-top-level-flow '{}' in realm '{}'",
                 executionToImport.getAuthenticator(), subFlow.getAlias(), realmImport.getRealm());
 
-        HashMap<String, String> execution = new HashMap<>();
+        HashMap<String, Object> execution = new HashMap<>();
         execution.put("provider", executionToImport.getAuthenticator());
+        // priority on sub-flow executions is honored only on Keycloak >= 25; older versions
+        // declare addExecutionToFlow as Map<String, String> and ignore the field.
+        // Integer local autoboxes the KC 22-24 primitive int getter so this compiles against both.
+        if (VersionUtil.ge(keycloakProvider.getKeycloakVersion(), SUB_FLOW_EXECUTION_PRIORITY_MIN_VERSION)) {
+            Integer priority = executionToImport.getPriority();
+            if (priority != null) {
+                execution.put("priority", priority);
+            }
+        }
 
         try {
             executionFlowRepository.createSubFlowExecution(realmImport.getRealm(), subFlow.getAlias(), execution);

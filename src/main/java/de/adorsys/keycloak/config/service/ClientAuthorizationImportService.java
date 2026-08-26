@@ -210,7 +210,16 @@ public class ClientAuthorizationImportService {
             );
         }
 
-        RealmManagementPermissionsResolver realmManagementPermissionsResolver = new RealmManagementPermissionsResolver(realmName);
+        boolean fgapV2Active = false;
+        try {
+            fgapV2Active = keycloakProvider.isFgapV2Active();
+        } catch (Exception e) {
+            logger.debug("Unable to determine FGAP V2 status in updateAuthorization: {}", e.getMessage());
+        }
+        boolean isAdminClient = REALM_MANAGEMENT_CLIENT_ID.equals(client.getClientId()) || ADMIN_PERMISSIONS_CLIENT_ID.equals(client.getClientId());
+        RealmManagementPermissionsResolver realmManagementPermissionsResolver = new RealmManagementPermissionsResolver(
+                realmName, fgapV2Active, isAdminClient
+        );
         if (REALM_MANAGEMENT_CLIENT_ID.equals(client.getClientId())) {
             realmManagementPermissionsResolver.createFineGrantedPermissions(authorizationSettingsToImport);
         }
@@ -906,9 +915,13 @@ public class ClientAuthorizationImportService {
 
         private final String realmName;
         private final Map<String, PermissionResolver> resolvers;
+        private final boolean isFgapV2;
+        private final boolean isAdminClient;
 
-        public RealmManagementPermissionsResolver(String realmName) {
+        public RealmManagementPermissionsResolver(String realmName, boolean isFgapV2, boolean isAdminClient) {
             this.realmName = realmName;
+            this.isFgapV2 = isFgapV2;
+            this.isAdminClient = isAdminClient;
             this.resolvers = new HashMap<>();
 
             resolvers.put("client", new ClientPermissionResolver(realmName, clientRepository));
@@ -979,16 +992,20 @@ public class ClientAuthorizationImportService {
 
         private String getSanitizedAuthzResourceName(String authzName) {
             PermissionTypeAndId typeAndId = PermissionTypeAndId.fromResourceName(authzName);
-            return getSanitizedAuthzName(authzName, typeAndId);
+            return getSanitizedAuthzName(authzName, typeAndId, true);
         }
 
 
-        private String getSanitizedAuthzName(String authzName, PermissionTypeAndId typeAndId) {
+        private String getSanitizedAuthzName(String authzName, PermissionTypeAndId typeAndId, boolean isResourceName) {
             if (typeAndId == null || !typeAndId.isPlaceholder()) {
                 return authzName;
             }
 
             String id = resolveObjectId(typeAndId, authzName);
+
+            if (isFgapV2 && isResourceName && isAdminClient && !"idp".equals(typeAndId.type)) {
+                return id;
+            }
 
             return authzName.replace(typeAndId.idOrPlaceholder, id);
         }
