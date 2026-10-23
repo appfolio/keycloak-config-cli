@@ -283,18 +283,26 @@ public class RoleImportService {
                 .collect(Collectors.toSet());
 
         for (RoleRepresentation existingRole : existingRoles) {
-            if (KeycloakUtil.isDefaultRole(existingRole) || importedRealmRoles.contains(existingRole.getName())) {
-                continue;
-            }
-
-            if (protectedRoleResolver.isRealmRoleProtected(existingRole.getName())) {
-                logProtectedRoleSkip("delete", "deletion", existingRole.getName(), null, realmName);
-                continue;
-            }
-
-            logger.debug("Delete realm-level role '{}' in realm '{}'", existingRole.getName(), realmName);
-            roleRepository.deleteRealmRole(realmName, existingRole);
+            deleteRealmRoleIfNotProtected(realmName, existingRole, importedRealmRoles);
         }
+    }
+
+    private void deleteRealmRoleIfNotProtected(
+            String realmName,
+            RoleRepresentation existingRole,
+            Set<String> importedRealmRoles
+    ) {
+        if (KeycloakUtil.isDefaultRole(existingRole) || importedRealmRoles.contains(existingRole.getName())) {
+            return;
+        }
+
+        if (protectedRoleResolver.isRealmRoleProtected(existingRole.getName())) {
+            logProtectedRoleSkip("delete", "deletion", existingRole.getName(), null, realmName);
+            return;
+        }
+
+        logger.debug("Delete realm-level role '{}' in realm '{}'", existingRole.getName(), realmName);
+        roleRepository.deleteRealmRole(realmName, existingRole);
     }
 
     private void deleteClientRolesMissingInImport(
@@ -306,22 +314,31 @@ public class RoleImportService {
         List<RoleRepresentation> managedRoles = getManagedClientRoles(clientId, existingRoles);
 
         for (RoleRepresentation role : managedRoles) {
-            boolean isImported = importedClientRoles != null
-                    && importedClientRoles.stream()
-                            .anyMatch(r -> r.getName().equals(role.getName()));
-            if (isImported || KeycloakUtil.isDefaultRole(role)) {
-                continue;
-            }
-
-            if (protectedRoleResolver.isClientRoleProtected(clientId, role.getName())) {
-                logProtectedRoleSkip("delete", "deletion", role.getName(), clientId, realmName);
-                continue;
-            }
-
-            logger.debug("Delete client-level role '{}' for client '{}' in realm '{}'",
-                    role.getName(), clientId, realmName);
-            roleRepository.deleteClientRole(realmName, clientId, role);
+            deleteClientRoleIfNotProtected(realmName, clientId, role, importedClientRoles);
         }
+    }
+
+    private void deleteClientRoleIfNotProtected(
+            String realmName,
+            String clientId,
+            RoleRepresentation role,
+            List<RoleRepresentation> importedClientRoles
+    ) {
+        boolean isImported = importedClientRoles != null
+                && importedClientRoles.stream()
+                        .anyMatch(r -> r.getName().equals(role.getName()));
+        if (isImported || KeycloakUtil.isDefaultRole(role)) {
+            return;
+        }
+
+        if (protectedRoleResolver.isClientRoleProtected(clientId, role.getName())) {
+            logProtectedRoleSkip("delete", "deletion", role.getName(), clientId, realmName);
+            return;
+        }
+
+        logger.debug("Delete client-level role '{}' for client '{}' in realm '{}'",
+                role.getName(), clientId, realmName);
+        roleRepository.deleteClientRole(realmName, clientId, role);
     }
 
     private void logProtectedRoleSkip(String action, String allowedAction, String roleName, String clientId, String realmName) {
