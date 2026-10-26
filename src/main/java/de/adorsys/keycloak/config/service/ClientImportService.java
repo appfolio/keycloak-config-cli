@@ -153,8 +153,7 @@ public class ClientImportService {
         candidateClients
                 .filter(client -> !KeycloakUtil.isDefaultClient(client)
                         && !importedClients.contains(client.getClientId())
-                        && !(Objects.equals(realmImport.getRealm(), "master")
-                                && client.getClientId().endsWith("-realm"))
+                        && !KeycloakUtil.isInternalClient(realmImport.getRealm(), client.getClientId())
                         && !(ADMIN_PERMISSIONS_CLIENT_ID.equals(client.getClientId())
                                 && keycloakProvider.isFgapV2Active())
                 )
@@ -212,6 +211,14 @@ public class ClientImportService {
         }
 
         if (existingClient.isPresent()) {
+            if (KeycloakUtil.isInternalClient(realmName, client.getClientId())) {
+                logger.info("Skipping update of client '{}' in realm '{}' - Keycloak rejects management "
+                        + "of this client through the Admin REST API regardless of caller privileges "
+                        + "(every realm's 'realm-management' client, and in the master realm, any client "
+                        + "whose id ends in '-realm').",
+                        getClientIdentifier(client), realmName);
+                return;
+            }
             updateClientIfNeeded(realmName, client, existingClient.get());
         } else {
             // Don't create system clients - they should already exist
