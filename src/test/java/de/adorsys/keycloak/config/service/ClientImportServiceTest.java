@@ -171,4 +171,97 @@ class ClientImportServiceTest {
         verify(clientRepository, times(1)).remove("test-realm", existingOther);
         verify(clientRepository, never()).remove("test-realm", existingAdminPermissions);
     }
+
+    @Test
+    void shouldSkipUpdatingRealmManagementClientInAnyRealm() {
+        ClientRepresentation imported = new ClientRepresentation();
+        imported.setClientId("realm-management");
+        imported.setEnabled(false);
+
+        ClientRepresentation existing = new ClientRepresentation();
+        existing.setClientId("realm-management");
+        existing.setEnabled(true);
+
+        when(clientRepository.searchByClientId("test-realm", "realm-management")).thenReturn(Optional.of(existing));
+
+        RealmImport realmImport = new RealmImport();
+        realmImport.setRealm("test-realm");
+        realmImport.setClients(List.of(imported));
+
+        service.doImport(realmImport);
+
+        verify(clientRepository, never()).update(anyString(), any());
+    }
+
+    @Test
+    void shouldSkipUpdatingMasterRealmProxyClient() {
+        ClientRepresentation imported = new ClientRepresentation();
+        imported.setClientId("foliospace-realm");
+        imported.setEnabled(false);
+
+        ClientRepresentation existing = new ClientRepresentation();
+        existing.setClientId("foliospace-realm");
+        existing.setEnabled(true);
+
+        when(clientRepository.searchByClientId("master", "foliospace-realm")).thenReturn(Optional.of(existing));
+
+        RealmImport realmImport = new RealmImport();
+        realmImport.setRealm("master");
+        realmImport.setClients(List.of(imported));
+
+        service.doImport(realmImport);
+
+        verify(clientRepository, never()).update(anyString(), any());
+    }
+
+    @Test
+    void shouldUpdateSameNamedClientOutsideMasterRealm() {
+        // namespace separation: the "-realm" suffix rule only applies within the master realm
+        ClientRepresentation imported = new ClientRepresentation();
+        imported.setClientId("foliospace-realm");
+        imported.setEnabled(false);
+
+        ClientRepresentation existing = new ClientRepresentation();
+        existing.setClientId("foliospace-realm");
+        existing.setEnabled(true);
+
+        when(clientRepository.searchByClientId("test-realm", "foliospace-realm")).thenReturn(Optional.of(existing));
+
+        RealmImport realmImport = new RealmImport();
+        realmImport.setRealm("test-realm");
+        realmImport.setClients(List.of(imported));
+
+        service.doImport(realmImport);
+
+        verify(clientRepository, times(1)).update(eq("test-realm"), any());
+    }
+
+    @Test
+    void shouldNotDeleteMasterRealmProxyClientMissingFromImport() {
+        when(managedProperties.getClient()).thenReturn(FULL);
+
+        ClientRepresentation imported = new ClientRepresentation();
+        imported.setClientId("keep");
+        imported.setDefaultClientScopes(List.of());
+        imported.setOptionalClientScopes(List.of());
+
+        ClientRepresentation existingProxyClient = new ClientRepresentation();
+        existingProxyClient.setClientId("foliospace-realm");
+
+        ClientRepresentation existingKeep = new ClientRepresentation();
+        existingKeep.setClientId("keep");
+        existingKeep.setDefaultClientScopes(List.of());
+        existingKeep.setOptionalClientScopes(List.of());
+
+        when(clientRepository.getAll("master")).thenReturn(List.of(existingProxyClient).stream());
+        when(clientRepository.searchByClientId("master", "keep")).thenReturn(Optional.of(existingKeep));
+
+        RealmImport realmImport = new RealmImport();
+        realmImport.setRealm("master");
+        realmImport.setClients(List.of(imported));
+
+        service.doImport(realmImport);
+
+        verify(clientRepository, never()).remove("master", existingProxyClient);
+    }
 }
