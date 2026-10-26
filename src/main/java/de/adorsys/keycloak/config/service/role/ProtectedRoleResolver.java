@@ -23,6 +23,7 @@ package de.adorsys.keycloak.config.service.role;
 import de.adorsys.keycloak.config.properties.ImportConfigProperties;
 import de.adorsys.keycloak.config.properties.ImportConfigProperties.ImportProtectedRolesProperties;
 import de.adorsys.keycloak.config.properties.ImportConfigProperties.ImportProtectedRolesProperties.ProtectedRolesMode;
+import de.adorsys.keycloak.config.util.KeycloakUtil;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -44,23 +45,21 @@ import java.util.Set;
  * unknown at configuration time.
  * <p>
  * Besides the configured/default protected roles above, this also handles a Keycloak server rule where
- * Keycloak treats every client whose id ends in "-realm" in the master realm the same as "realm-management".
- * Role updates/deletes on them are rejected with HTTP 403 for any caller.
+ * the "realm-management" client and every client whose id ends in "-realm" in the master realm are treated
+ * as internal clients. Role updates/deletes on them are rejected with HTTP 403 for any caller, and so they are
+ * considered protected client roles.
  * See {@code ClientPermissions.isInternal} and {@code AdminRoles.APP_SUFFIX} in the Keycloak server
  * source. Unlike the other built-in defaults, this one can't be expressed as a fixed client id in
- * configuration since the matching clients are named after whatever realms exist, so it's applied
- * directly here instead, gated the same way as the other built-ins (active in ADD mode, suppressed by
- * REPLACE).
+ * configuration since the matching clients are named after whatever realms exist, so it's resolved
+ * directly here via {@link KeycloakUtil#isInternalClient} instead, gated the same way as the other
+ * built-ins (active in ADD mode, suppressed by REPLACE).
  */
 @Component
 @ConditionalOnProperty(prefix = "run", name = "operation", havingValue = "IMPORT", matchIfMissing = true)
 public class ProtectedRoleResolver {
 
     private static final Collection<String> BUILT_IN_PROTECTED_REALM_ROLES = List.of("admin", "create-realm");
-    private static final String BUILT_IN_PROTECTED_CLIENT_ID = "realm-management";
     private static final String WILDCARD = "*";
-    private static final String MASTER_REALM = "master";
-    private static final String MASTER_REALM_PROXY_CLIENT_SUFFIX = "-realm";
 
     private final boolean isAddMode;
     private final Set<String> protectedRealmRoles;
@@ -69,16 +68,15 @@ public class ProtectedRoleResolver {
     public ProtectedRoleResolver(ImportConfigProperties importConfigProperties) {
         ImportProtectedRolesProperties protectedRolesProperties = importConfigProperties.getProtectedRoles();
         Set<String> realmRoles = new HashSet<>();
-        Map<String, Set<String>> clientRoles = new HashMap<>();
 
         this.isAddMode = protectedRolesProperties.getMode() == ProtectedRolesMode.ADD;
         if (isAddMode) {
             realmRoles.addAll(BUILT_IN_PROTECTED_REALM_ROLES);
-            clientRoles.put(BUILT_IN_PROTECTED_CLIENT_ID, new HashSet<>(Set.of(WILDCARD)));
         }
 
         realmRoles.addAll(protectedRolesProperties.getRealmRoles());
 
+        Map<String, Set<String>> clientRoles = new HashMap<>();
         for (Map.Entry<String, Collection<String>> entry : protectedRolesProperties.getClientRoles().entrySet()) {
             clientRoles.computeIfAbsent(entry.getKey(), key -> new HashSet<>()).addAll(entry.getValue());
         }
@@ -103,7 +101,7 @@ public class ProtectedRoleResolver {
         if (clientId == null || roleName == null) {
             return false;
         }
-        if (isAddMode && isMasterRealmProxyClient(realmName, clientId)) {
+        if (isAddMode && KeycloakUtil.isInternalClient(realmName, clientId)) {
             return true;
         }
         Set<String> roles = protectedClientRoles.get(clientId);
@@ -111,10 +109,6 @@ public class ProtectedRoleResolver {
             return false;
         }
         return roles.contains(WILDCARD) || roles.contains(roleName);
-    }
-
-    private boolean isMasterRealmProxyClient(String realmName, String clientId) {
-        return MASTER_REALM.equals(realmName) && clientId.endsWith(MASTER_REALM_PROXY_CLIENT_SUFFIX);
     }
 
     public List<RoleRepresentation> filterUnprotectedRealmRoles(List<RoleRepresentation> realmRoles) {
