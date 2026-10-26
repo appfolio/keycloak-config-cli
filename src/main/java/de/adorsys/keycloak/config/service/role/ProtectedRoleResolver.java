@@ -42,6 +42,15 @@ import java.util.Set;
  * <p>
  * A protected client role entry of {@code "*"} protects every role of that client, including roles
  * unknown at configuration time.
+ * <p>
+ * Besides the configured/default protected roles above, this also handles a Keycloak server rule where
+ * Keycloak treats every client whose id ends in "-realm" in the master realm the same as "realm-management".
+ * Role updates/deletes on them are rejected with HTTP 403 for any caller.
+ * See {@code ClientPermissions.isInternal} and {@code AdminRoles.APP_SUFFIX} in the Keycloak server
+ * source. Unlike the other built-in defaults, this one can't be expressed as a fixed client id in
+ * configuration since the matching clients are named after whatever realms exist, so it's applied
+ * directly here instead, gated the same way as the other built-ins (active in ADD mode, suppressed by
+ * REPLACE).
  */
 @Component
 @ConditionalOnProperty(prefix = "run", name = "operation", havingValue = "IMPORT", matchIfMissing = true)
@@ -50,7 +59,10 @@ public class ProtectedRoleResolver {
     private static final Collection<String> BUILT_IN_PROTECTED_REALM_ROLES = List.of("admin", "create-realm");
     private static final String BUILT_IN_PROTECTED_CLIENT_ID = "realm-management";
     private static final String WILDCARD = "*";
+    private static final String MASTER_REALM = "master";
+    private static final String MASTER_REALM_PROXY_CLIENT_SUFFIX = "-realm";
 
+    private final boolean isAddMode;
     private final Set<String> protectedRealmRoles;
     private final Map<String, Set<String>> protectedClientRoles;
 
@@ -59,7 +71,8 @@ public class ProtectedRoleResolver {
         Set<String> realmRoles = new HashSet<>();
         Map<String, Set<String>> clientRoles = new HashMap<>();
 
-        if (protectedRolesProperties.getMode() == ProtectedRolesMode.ADD) {
+        this.isAddMode = protectedRolesProperties.getMode() == ProtectedRolesMode.ADD;
+        if (isAddMode) {
             realmRoles.addAll(BUILT_IN_PROTECTED_REALM_ROLES);
             clientRoles.put(BUILT_IN_PROTECTED_CLIENT_ID, new HashSet<>(Set.of(WILDCARD)));
         }
@@ -86,9 +99,12 @@ public class ProtectedRoleResolver {
         return protectedRealmRoles.contains(roleName);
     }
 
-    public boolean isClientRoleProtected(String clientId, String roleName) {
+    public boolean isClientRoleProtected(String realmName, String clientId, String roleName) {
         if (clientId == null || roleName == null) {
             return false;
+        }
+        if (isAddMode && isMasterRealmProxyClient(realmName, clientId)) {
+            return true;
         }
         Set<String> roles = protectedClientRoles.get(clientId);
         if (roles == null) {
@@ -97,18 +113,22 @@ public class ProtectedRoleResolver {
         return roles.contains(WILDCARD) || roles.contains(roleName);
     }
 
+    private boolean isMasterRealmProxyClient(String realmName, String clientId) {
+        return MASTER_REALM.equals(realmName) && clientId.endsWith(MASTER_REALM_PROXY_CLIENT_SUFFIX);
+    }
+
     public List<RoleRepresentation> filterUnprotectedRealmRoles(List<RoleRepresentation> realmRoles) {
         return realmRoles.stream()
                 .filter(role -> !isRealmRoleProtected(role.getName()))
                 .toList();
     }
 
-    public Map<String, List<RoleRepresentation>> filterUnprotectedClientRoles(Map<String, List<RoleRepresentation>> clientRoles) {
+    public Map<String, List<RoleRepresentation>> filterUnprotectedClientRoles(String realmName, Map<String, List<RoleRepresentation>> clientRoles) {
         Map<String, List<RoleRepresentation>> filtered = new LinkedHashMap<>();
         for (Map.Entry<String, List<RoleRepresentation>> client : clientRoles.entrySet()) {
             String clientId = client.getKey();
             List<RoleRepresentation> unprotectedRoles = client.getValue().stream()
-                    .filter(role -> !isClientRoleProtected(clientId, role.getName()))
+                    .filter(role -> !isClientRoleProtected(realmName, clientId, role.getName()))
                     .toList();
             filtered.put(clientId, unprotectedRoles);
         }

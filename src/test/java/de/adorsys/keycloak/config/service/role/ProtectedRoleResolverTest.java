@@ -41,6 +41,8 @@ import static org.mockito.Mockito.when;
 
 class ProtectedRoleResolverTest {
 
+    private static final String OTHER_REALM = "other-realm";
+
     private static ProtectedRoleResolver resolverFor(ImportProtectedRolesProperties protectedRolesProperties) {
         ImportConfigProperties importConfigProperties = mock(ImportConfigProperties.class);
         when(importConfigProperties.getProtectedRoles()).thenReturn(protectedRolesProperties);
@@ -68,13 +70,13 @@ class ProtectedRoleResolverTest {
 
         @Test
         void isClientRoleProtected_shouldProtectAnyRoleOfRealmManagementClient() {
-            assertTrue(resolver.isClientRoleProtected("realm-management", "manage-users"));
-            assertTrue(resolver.isClientRoleProtected("realm-management", "any-future-role"));
+            assertTrue(resolver.isClientRoleProtected(OTHER_REALM, "realm-management", "manage-users"));
+            assertTrue(resolver.isClientRoleProtected(OTHER_REALM, "realm-management", "any-future-role"));
         }
 
         @Test
         void isClientRoleProtected_shouldNotProtectOtherClients() {
-            assertFalse(resolver.isClientRoleProtected("moped-client", "manage-users"));
+            assertFalse(resolver.isClientRoleProtected(OTHER_REALM, "moped-client", "manage-users"));
         }
 
         @Test
@@ -110,17 +112,17 @@ class ProtectedRoleResolverTest {
 
         @Test
         void isClientRoleProtected_shouldStillProtectRealmManagementDefaults() {
-            assertTrue(resolver.isClientRoleProtected("realm-management", "manage-users"));
+            assertTrue(resolver.isClientRoleProtected(OTHER_REALM, "realm-management", "manage-users"));
         }
 
         @Test
         void isClientRoleProtected_shouldAlsoProtectConfiguredClientRole() {
-            assertTrue(resolver.isClientRoleProtected("my-client", "my_protected_client_role"));
+            assertTrue(resolver.isClientRoleProtected(OTHER_REALM, "my-client", "my_protected_client_role"));
         }
 
         @Test
         void isClientRoleProtected_shouldNotProtectUnconfiguredRoleOfConfiguredClient() {
-            assertFalse(resolver.isClientRoleProtected("my-client", "some_other_role"));
+            assertFalse(resolver.isClientRoleProtected(OTHER_REALM, "my-client", "some_other_role"));
         }
     }
 
@@ -149,12 +151,12 @@ class ProtectedRoleResolverTest {
 
         @Test
         void isClientRoleProtected_shouldNotProtectRealmManagementDefaults() {
-            assertFalse(resolver.isClientRoleProtected("realm-management", "manage-users"));
+            assertFalse(resolver.isClientRoleProtected(OTHER_REALM, "realm-management", "manage-users"));
         }
 
         @Test
         void isClientRoleProtected_shouldProtectOnlyConfiguredClientRole() {
-            assertTrue(resolver.isClientRoleProtected("my-client", "my_only_protected_client_role"));
+            assertTrue(resolver.isClientRoleProtected(OTHER_REALM, "my-client", "my_only_protected_client_role"));
         }
     }
 
@@ -173,7 +175,7 @@ class ProtectedRoleResolverTest {
 
         @Test
         void isClientRoleProtected_shouldProtectNothing() {
-            assertFalse(resolver.isClientRoleProtected("realm-management", "manage-users"));
+            assertFalse(resolver.isClientRoleProtected(OTHER_REALM, "realm-management", "manage-users"));
         }
     }
 
@@ -187,13 +189,49 @@ class ProtectedRoleResolverTest {
         void isClientRoleProtected_shouldNotMatchRealmRoleNameAsClientRole() {
             // Requirement B.6: "admin" is a protected REALM role, must never match a client role
             // of the same name belonging to some unrelated client.
-            assertFalse(resolver.isClientRoleProtected("moped-client", "admin"));
+            assertFalse(resolver.isClientRoleProtected(OTHER_REALM, "moped-client", "admin"));
         }
 
         @Test
         void isClientRoleProtected_shouldMatchRealmManagementRoleRegardlessOfName() {
             // realm-management is wildcard-protected by default, any role name matches
-            assertTrue(resolver.isClientRoleProtected("realm-management", "unrelated-role-with-wrong-client"));
+            assertTrue(resolver.isClientRoleProtected(OTHER_REALM, "realm-management", "unrelated-role-with-wrong-client"));
+        }
+    }
+
+    @Nested
+    class MasterRealmProxyClientProtection {
+        // Mirrors Keycloak's own ClientPermissions.isInternal(): in the master realm, any client
+        // whose id ends in "-realm" (its per-realm admin-console proxy clients) is treated like
+        // realm-management - this isn't configurable via client-roles since the matching client
+        // ids aren't known in advance (they're named after whatever realms exist).
+        private final ProtectedRoleResolver resolver = resolverFor(
+                new ImportProtectedRolesProperties(ProtectedRolesMode.ADD, List.of(), Map.of())
+        );
+
+        @Test
+        void isClientRoleProtected_shouldProtectRealmProxyClientInMasterRealm() {
+            assertTrue(resolver.isClientRoleProtected("master", "foliospace-realm", "create-client"));
+            assertTrue(resolver.isClientRoleProtected("master", "data-api-realm", "any-future-role"));
+        }
+
+        @Test
+        void isClientRoleProtected_shouldNotProtectSameClientIdOutsideMasterRealm() {
+            // namespace separation: the "-realm" suffix rule only applies within the master realm
+            assertFalse(resolver.isClientRoleProtected(OTHER_REALM, "foliospace-realm", "create-client"));
+        }
+
+        @Test
+        void isClientRoleProtected_shouldNotProtectNonSuffixedClientInMasterRealm() {
+            assertFalse(resolver.isClientRoleProtected("master", "moped-client", "create-client"));
+        }
+
+        @Test
+        void isClientRoleProtected_shouldBeSuppressedByReplaceModeOptOut() {
+            ProtectedRoleResolver optedOut = resolverFor(
+                    new ImportProtectedRolesProperties(ProtectedRolesMode.REPLACE, List.of(), Map.of())
+            );
+            assertFalse(optedOut.isClientRoleProtected("master", "foliospace-realm", "create-client"));
         }
     }
 
@@ -211,13 +249,13 @@ class ProtectedRoleResolverTest {
 
         @Test
         void isClientRoleProtected_shouldProtectAnyRoleName() {
-            assertTrue(resolver.isClientRoleProtected("wildcard-client", "some-role-not-known-in-advance"));
-            assertTrue(resolver.isClientRoleProtected("wildcard-client", "another-future-role"));
+            assertTrue(resolver.isClientRoleProtected(OTHER_REALM, "wildcard-client", "some-role-not-known-in-advance"));
+            assertTrue(resolver.isClientRoleProtected(OTHER_REALM, "wildcard-client", "another-future-role"));
         }
 
         @Test
         void isClientRoleProtected_shouldNotAffectOtherClients() {
-            assertFalse(resolver.isClientRoleProtected("other-client", "some-role"));
+            assertFalse(resolver.isClientRoleProtected(OTHER_REALM, "other-client", "some-role"));
         }
     }
 
@@ -236,8 +274,8 @@ class ProtectedRoleResolverTest {
 
         @Test
         void isClientRoleProtected_shouldNotThrowForAbsentClient() {
-            assertTrue(resolver.isClientRoleProtected("non-existent-client", "whatever"));
-            assertFalse(resolver.isClientRoleProtected("other-client", "whatever"));
+            assertTrue(resolver.isClientRoleProtected(OTHER_REALM, "non-existent-client", "whatever"));
+            assertFalse(resolver.isClientRoleProtected(OTHER_REALM, "other-client", "whatever"));
         }
     }
 
@@ -254,12 +292,12 @@ class ProtectedRoleResolverTest {
 
         @Test
         void isClientRoleProtected_shouldReturnFalseForNullClientId() {
-            assertFalse(resolver.isClientRoleProtected(null, "manage-users"));
+            assertFalse(resolver.isClientRoleProtected(OTHER_REALM, null, "manage-users"));
         }
 
         @Test
         void isClientRoleProtected_shouldReturnFalseForNullRoleName() {
-            assertFalse(resolver.isClientRoleProtected("realm-management", null));
+            assertFalse(resolver.isClientRoleProtected(OTHER_REALM, "realm-management", null));
         }
     }
 }
