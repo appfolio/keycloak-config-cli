@@ -139,7 +139,7 @@ public class RoleImportService {
             );
         }
 
-        clientRoleCompositeImport.update(realmName, protectedRoleResolver.filterUnprotectedClientRoles(clientRoles));
+        clientRoleCompositeImport.update(realmName, protectedRoleResolver.filterUnprotectedClientRoles(realmName, clientRoles));
     }
 
     private void createOrUpdateRealmRoles(
@@ -199,7 +199,7 @@ public class RoleImportService {
                     .filter(r -> Objects.equals(r.getName(), roleName))
                     .findFirst()
                     .ifPresentOrElse(existingClientRole -> {
-                        if (protectedRoleResolver.isClientRoleProtected(clientId, roleName)) {
+                        if (protectedRoleResolver.isClientRoleProtected(realmName, clientId, roleName)) {
                             logProtectedRoleSkip("update", "updates", roleName, clientId, realmName);
                             return;
                         }
@@ -331,7 +331,7 @@ public class RoleImportService {
             return;
         }
 
-        if (protectedRoleResolver.isClientRoleProtected(clientId, role.getName())) {
+        if (protectedRoleResolver.isClientRoleProtected(realmName, clientId, role.getName())) {
             logProtectedRoleSkip("delete", "deletion", role.getName(), clientId, realmName);
             return;
         }
