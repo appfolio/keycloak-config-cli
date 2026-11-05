@@ -30,22 +30,24 @@ public class KeycloakUtil {
     private static final String MASTER_REALM = "master";
     private static final String MASTER_REALM_PROXY_CLIENT_SUFFIX = "-realm";
     private static final String REALM_MANAGEMENT_CLIENT_ID = "realm-management";
+    private static final String ADMIN_PERMISSIONS_CLIENT_ID = "admin-permissions";
 
     private KeycloakUtil() {
     }
 
     /**
      * Mirrors Keycloak's own ClientPermissions.isInternal(): every realm's "realm-management" client,
-     * and in the master realm specifically, any client whose id ends in "-realm" (its per-realm
-     * admin-console proxy clients, e.g. "foliospace-realm"). Keycloak 26.7+ rejects management of
-     * these clients - and of "realm-management" client roles - through the Admin REST API for any
-     * caller, regardless of privileges.
+     * every realm's "admin-permissions" client, and in the master realm specifically, any client
+     * whose id ends in "-realm" (its per-realm admin-console proxy clients, e.g. "{realmName}-realm").
+     * Keycloak 26.7+ rejects management of these clients and their client roles - through the
+     * Admin REST API for any caller, regardless of privileges.
      */
     public static boolean isInternalClient(String realmName, String clientId) {
         if (clientId == null) {
             return false;
         }
         return REALM_MANAGEMENT_CLIENT_ID.equals(clientId)
+                || ADMIN_PERMISSIONS_CLIENT_ID.equals(clientId)
                 || (MASTER_REALM.equals(realmName) && clientId.endsWith(MASTER_REALM_PROXY_CLIENT_SUFFIX));
     }
 
