@@ -277,9 +277,7 @@ public class RoleCompositeRepository {
     ) {
         RoleResource roleResource = roleSupplier.get();
 
-        List<RoleRepresentation> realmRoles = realmComposites.stream()
-                .map(realmRoleName -> roleRepository.getRealmRole(realmName, realmRoleName))
-                .toList();
+        List<RoleRepresentation> realmRoles = roleRepository.getRealmRolesByName(realmName, realmComposites);
 
         roleResource.addComposites(realmRoles);
     }
@@ -314,9 +312,7 @@ public class RoleCompositeRepository {
     ) {
         RoleResource roleResource = roleSupplier.get();
 
-        List<RoleRepresentation> realmRoles = realmComposites.stream()
-                .map(realmRoleName -> roleRepository.getRealmRole(realmName, realmRoleName))
-                .toList();
+        List<RoleRepresentation> realmRoles = roleRepository.getRealmRolesByName(realmName, realmComposites);
 
         roleResource.deleteComposites(realmRoles);
     }
