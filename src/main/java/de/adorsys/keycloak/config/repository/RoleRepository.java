@@ -110,9 +110,20 @@ public class RoleRepository {
                 .roles().list();
     }
 
+    // One list call instead of a GET per name: composite roles can reference hundreds of roles.
     public List<RoleRepresentation> getRealmRolesByName(String realmName, Collection<String> roles) {
+        if (roles.isEmpty()) {
+            return List.of();
+        }
+
+        var realmRolesByName = getRealmRoles(realmName).stream()
+                .collect(Collectors.toMap(RoleRepresentation::getName, role -> role));
+
         return roles.stream()
-                .map(role -> getRealmRole(realmName, role))
+                .map(role -> Optional.ofNullable(realmRolesByName.get(role))
+                        .orElseThrow(() -> new KeycloakRepositoryException(
+                                "Cannot find realm role '%s' within realm '%s'", role, realmName
+                        )))
                 .toList();
     }
 
